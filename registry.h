@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 typedef struct registry {
 
@@ -23,11 +24,13 @@ typedef struct registry {
 
   int tamNomeEstacao;
   char* nomeEstacao;
-  
+
   int tamNomeLinha;
   char* nomeLinha;
 
 } Registry;
+
+
 
 
 #endif
