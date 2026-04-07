@@ -5,6 +5,7 @@
 #include<string.h>
 #include<stdlib.h>
 #include "registry.h"
+#include "header.h"
 
 /**
  * @brief Logic: csv -> record in binary file, then show binary output
@@ -16,10 +17,15 @@
  * @param inputCSVFILE .csv file that contains values of the registry's fields. 
  * * @param outputBinaryFile .bin generated using the .csv file, written by binarioNaTela
  */
-int writeCSVtoBinary(FILE* inputCSVFile, FILE* outputBinaryFile);
+int csvToMemory(FILE* inputCSVFile);
 
 
-int selectRegistryBinary(FILE* inputFileBinary);
+int showData(FILE* inputFileBinary);
+/*-> Receber um binario, converter ele em string, e printar cada registro como uma linha, todo nulo deve ser NULO. 
+Caso não tenha registrtos -> Registro inexistente
+Erro encontrado -> Falha no processamento do arquivo
+*/
+
 
 int whereRegistryBinary(FILE* inputFileBinary, int n, char* nomeCampo, char* valorCampo);
 

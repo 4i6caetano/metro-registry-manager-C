@@ -178,32 +178,4 @@ void fillRegistry(char* buffer, Registry *newRegistry){
     }
   };
 
-
-/**
- *@brief csvToMemory() is the first main function of the project. Utilizing the functions 'fillRegistry' and 'registryToBinary', it reads the .csv file contents into a buffer, transform it into a organized data structure of type Registry, and using this, converts all this data into a .bin file, ultimately, it prints the binary text created.
- * @param inputCSVFile .csv file containing the data, divided by its appropriate fields.
- */
-void csvToMemory(FILE* inputCSVFile){
-  char buffer[8000];
-  Registry newRegistry;
-  FILE* outputBinaryFile = fopen("estacoes.bin", "wb");
-
-  if(outputBinaryFile == NULL){
-    return;
-  }
-
-    fgets(buffer, sizeof(buffer), inputCSVFile);
-
-    while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
-      fillRegistry(buffer, &newRegistry);
-      registryToBinary(&newRegistry, outputBinaryFile);
-  }
-
-    fclose(outputBinaryFile);
-    BinarioNaTela("estacoes.bin");
-};
-
-//CodEstacao,NomeEstacao,CodLinha,NomeLinha,CodProxEst,DistanciaProxEst,CodLinhaInteg,CodEstacaoInteg
-// escrever o csv no buffer -> pegar o buffer e escrever tudo em registros -> a cada registro, escrever em binario
-
 #endif

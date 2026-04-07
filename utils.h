@@ -7,7 +7,12 @@
 
 void BinarioNaTela(char *arquivo);
 void ScanQuoteString(char *str);
-int csvToMemory(FILE* inputCSVFile);
+
+char* getToken(char** buffer);
+void fillRegistry(char* buffer, Registry *newRegistry);
+void registryToBinary(Registry *newRegistry, FILE* outputBinaryFile);
+
+
 
 
 #endif
