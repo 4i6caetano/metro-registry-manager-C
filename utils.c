@@ -75,43 +75,77 @@ void ScanQuoteString(char *str) {
     }
 }
 
-int csvToMemory(FILE* inputCSVFile){
-char buffer[8000];
-char* token;
-Registry newRegistry;
+void fillRegistry(char* buffer, Registry *newRegistry){
+  char* token;
+  token = strtok(buffer, ",");
+  newRegistry->codEstacao = atoi(token); 
 
-  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
+  token = strtok(NULL, ",");
+  newRegistry->tamNomeEstacao = strlen(token);
+  newRegistry->nomeEstacao = strdup(token);
+
+  token = strtok(NULL, ",");
+  newRegistry->codLinha = atoi(token);
+
+  token = strtok(NULL, ",");
+  newRegistry->tamNomeLinha = strlen(token);
+  newRegistry->nomeLinha = strdup(token);
+
+  token = strtok(NULL, ",");
+  newRegistry->codProxEstacao = atoi(token);
+  
+  token = strtok(NULL, ",");
+  newRegistry->distProxEstacao = atoi(token);
+
+  token = strtok(NULL, ",");
+  newRegistry->codLinhaIntegra = atoi(token);
+
+  token = strtok(NULL, ",");
+  newRegistry->codEstIntegra = atoi(token);
+
+  newRegistry->removido = '0';
+  newRegistry->proximo = -1;
   };
 
-  token = strtok(buffer, ",");
-  newRegistry.codEstacao = atoi(token); 
+  void registryToBinary(Registry *newRegistry, FILE* outputBinaryFile){
 
-  token = strtok(NULL, ',');
-  newRegistry.tamNomeEstacao = strlen(token);
-  newRegistry.nomeEstacao = strdup(token);
+    //Campos de tamanho fixo
+    fwrite(&newRegistry->removido, sizeof(char), 1, outputBinaryFile);
+    fwrite(&newRegistry->proximo, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->codEstacao, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->codLinha, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->codProxEstacao, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->distProxEstacao, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->codLinhaIntegra, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->codEstIntegra, sizeof(int), 1, outputBinaryFile);
+    fwrite(&newRegistry->tamNomeEstacao, sizeof(int), 1, outputBinaryFile);
 
-  token = strtok(NULL, ',');
-  newRegistry.codLinha = atoi(token);
+    //Campos de tamanho variável
+    if(newRegistry->tamNomeEstacao > 0){
+      fwrite(newRegistry->nomeEstacao, sizeof(char), newRegistry->tamNomeEstacao, outputBinaryFile);
+      free(newRegistry->nomeEstacao);
+    }
+    fwrite(&newRegistry->tamNomeLinha, sizeof(int), 1, outputBinaryFile);
+    if(newRegistry->tamNomeLinha > 0){
+      fwrite(&newRegistry->nomeLinha, sizeof(char), newRegistry->tamNomeLinha, outputBinaryFile);
+    }
+  };
 
-  token = strtok(NULL, ',');
-  newRegistry.tamNomeLinha = strlen(token);
-  newRegistry.nomeLinha = strdup(token);
+int csvToMemory(FILE* inputCSVFile, FILE* outputBinaryFile){
+char buffer[8000];
+Registry newRegistry;
+FILE* outputBinaryFile;
+outputBinaryFile = fopen('estacoes.bin', 'ab');
 
-  token = strtok(NULL, ',');
-  newRegistry.codProxEstacao = atoi(token);
-  
-  token = strtok(NULL, ',');
-  newRegistry.distProxEstacao = atoi(token);
+  fgets(buffer, sizeof(buffer), inputCSVFile);
 
-  token = strtok(NULL, ',');
-  newRegistry.codLinhaIntegra = atoi(token);
-
-  token = strtok(NULL, ',');
-  newRegistry.codEstIntegra = atoi(token);
-  
-
+  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
+    fillRegistry(buffer, &newRegistry);
+    registryToBinary(&newRegistry, outputBinaryFile);
+};
 };
 
 //CodEstacao,NomeEstacao,CodLinha,NomeLinha,CodProxEst,DistanciaProxEst,CodLinhaInteg,CodEstacaoInteg
+// escrever o csv no buffer -> pegar o buffer e escrever tudo em registros -> a cada registro, escrever em binario
 
 #endif
