@@ -7,6 +7,10 @@
 #include "utils.h"
 #include "registry.h"
 
+
+/**
+ * @brief Reads and print a .bin file.
+ */
 void BinarioNaTela(char *arquivo) {
     FILE *fs;
     if (arquivo == NULL || !(fs = fopen(arquivo, "rb"))) {
@@ -75,11 +79,15 @@ void ScanQuoteString(char *str) {
     }
 }
 
+
+/**
+ * @brief Substitute function of strtok, read continuously a buffer until the file ends. Handle void fields and parse using ','.
+ */
 char* getToken(char** buffer) {
     if (*buffer == NULL) return NULL;
     
-    char* tokenStart = *buffer;
-    char* tokenEnd = strchr(tokenStart, ',');
+    char* tokenStart = *buffer; /**char* pointer to the beggining of buffer memory adress, changes throughout the use.  */
+    char* tokenEnd = strchr(tokenStart, ','); /**char* pointer responsible for separating the fields, is updated throughout the use.*/
     
     if (tokenEnd != NULL) {
         *tokenEnd = '\0'; 
@@ -91,6 +99,16 @@ char* getToken(char** buffer) {
     return tokenStart;
 }
 
+/**
+ * @brief function responsible for transforming the 'string' fields of the .csv file into the Registry struct structure.
+ * Uses getToken().
+ * 
+ * To convert to numbers, 'atoi()' is used.
+ * To deal with sizes, 'strlen()' is used.
+ * To handle void fields, the ternary operator is implemented so it can fill it with '-1' for INT and '0' for STRING.
+ * @param buffer buffer to storage the data.
+ * @param newRegistry a Registry type struct 
+ */
 void fillRegistry(char* buffer, Registry *newRegistry){
   buffer[strcspn(buffer, "\r\n")] = '\0';
 
@@ -127,6 +145,14 @@ void fillRegistry(char* buffer, Registry *newRegistry){
   newRegistry->proximo = -1;
   };
 
+
+  /**
+   * @brief registryToBinary(), using fwrite(), writes all the Registry type fields into binary, using a .bin file given.
+   * 
+   * Measures were used to ensure the names of the station and lines were avaible.
+   * @param newRegistry a given Registry type struct that contain the data in its fields.
+   * @param outputBinaryFile a given .bin that will be written on.
+   */
   void registryToBinary(Registry *newRegistry, FILE* outputBinaryFile){
 
     //Fixed size fields
@@ -152,24 +178,29 @@ void fillRegistry(char* buffer, Registry *newRegistry){
     }
   };
 
+
+/**
+ *@brief csvToMemory() is the first main function of the project. Utilizing the functions 'fillRegistry' and 'registryToBinary', it reads the .csv file contents into a buffer, transform it into a organized data structure of type Registry, and using this, converts all this data into a .bin file, ultimately, it prints the binary text created.
+ * @param inputCSVFile .csv file containing the data, divided by its appropriate fields.
+ */
 void csvToMemory(FILE* inputCSVFile){
-char buffer[8000];
-Registry newRegistry;
-FILE* outputBinaryFile = fopen("estacoes.bin", "wb");
+  char buffer[8000];
+  Registry newRegistry;
+  FILE* outputBinaryFile = fopen("estacoes.bin", "wb");
 
-if(outputBinaryFile == NULL){
-  return;
-}
+  if(outputBinaryFile == NULL){
+    return;
+  }
 
-  fgets(buffer, sizeof(buffer), inputCSVFile);
+    fgets(buffer, sizeof(buffer), inputCSVFile);
 
-  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
-    fillRegistry(buffer, &newRegistry);
-    registryToBinary(&newRegistry, outputBinaryFile);
-}
+    while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
+      fillRegistry(buffer, &newRegistry);
+      registryToBinary(&newRegistry, outputBinaryFile);
+  }
 
-  fclose(outputBinaryFile);
-  BinarioNaTela("estacoes.bin");
+    fclose(outputBinaryFile);
+    BinarioNaTela("estacoes.bin");
 };
 
 //CodEstacao,NomeEstacao,CodLinha,NomeLinha,CodProxEst,DistanciaProxEst,CodLinhaInteg,CodEstacaoInteg

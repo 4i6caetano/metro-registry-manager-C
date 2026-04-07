@@ -11,7 +11,29 @@
 #include <stdlib.h>
 
 /**
- * @brief registry struct structure
+ * @brief The type Registry struct.
+ * 
+ **char removido;
+
+ ** int proximo; 
+
+ *int codEstacao; 
+
+ *int codLinha;
+
+ * int codProxEstacao;
+
+ * int distProxEstacao;
+
+ * int codLinhaIntegra;
+
+ *  int codEstIntegra; 
+
+ * int tamNomeEstacao;
+
+ * int tamNomeLinha; 
+
+ * char* nomeLinha;
  */
 typedef struct registry {
 
@@ -32,8 +54,6 @@ typedef struct registry {
   char* nomeLinha; /** (CHAR*) line's name: variable fields with fixed registry.  */
 
 } Registry;
-
-
 
 
 #endif
