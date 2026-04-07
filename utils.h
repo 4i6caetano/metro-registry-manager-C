@@ -7,6 +7,7 @@
 
 void BinarioNaTela(char *arquivo);
 void ScanQuoteString(char *str);
+int csvToMemory(FILE* inputCSVFile);
 
 
 #endif

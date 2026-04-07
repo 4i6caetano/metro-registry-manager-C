@@ -1,6 +1,11 @@
 #ifndef UTILS_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include "utils.h"
+#include "registry.h"
 
 void BinarioNaTela(char *arquivo) {
     FILE *fs;
@@ -69,5 +74,44 @@ void ScanQuoteString(char *str) {
         strcpy(str, "");
     }
 }
+
+int csvToMemory(FILE* inputCSVFile){
+char buffer[8000];
+char* token;
+Registry newRegistry;
+
+  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
+  };
+
+  token = strtok(buffer, ",");
+  newRegistry.codEstacao = atoi(token); 
+
+  token = strtok(NULL, ',');
+  newRegistry.tamNomeEstacao = strlen(token);
+  newRegistry.nomeEstacao = strdup(token);
+
+  token = strtok(NULL, ',');
+  newRegistry.codLinha = atoi(token);
+
+  token = strtok(NULL, ',');
+  newRegistry.tamNomeLinha = strlen(token);
+  newRegistry.nomeLinha = strdup(token);
+
+  token = strtok(NULL, ',');
+  newRegistry.codProxEstacao = atoi(token);
+  
+  token = strtok(NULL, ',');
+  newRegistry.distProxEstacao = atoi(token);
+
+  token = strtok(NULL, ',');
+  newRegistry.codLinhaIntegra = atoi(token);
+
+  token = strtok(NULL, ',');
+  newRegistry.codEstIntegra = atoi(token);
+  
+
+};
+
+//CodEstacao,NomeEstacao,CodLinha,NomeLinha,CodProxEst,DistanciaProxEst,CodLinhaInteg,CodEstacaoInteg
 
 #endif
