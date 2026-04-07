@@ -1,10 +1,12 @@
 #ifndef UTILS_H
 
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
-void binarioNaTela(FILE *arquivo_binario);
+void BinarioNaTela(char *arquivo);
+void ScanQuoteString(char *str);
 
 
 #endif
