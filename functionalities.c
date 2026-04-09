@@ -33,9 +33,6 @@ void csvToBinary(FILE* inputCSVFile){
     BinarioNaTela("estacoes.bin");
 };
 
-//CodEstacao,NomeEstacao,CodLinha,NomeLinha,CodProxEst,DistanciaProxEst,CodLinhaInteg,CodEstacaoInteg
-// escrever o csv no buffer -> pegar o buffer e escrever tudo em registros -> a cada registro, escrever em binario
-
 /*
 -> abrir o arquivo em modo leitura binario
 -> checagem de erro
@@ -75,7 +72,143 @@ if(validRegistry == 0){
 
 fclose(binaryFile);
 
-
 }
+
+typedef struct field{
+      char name[100];
+      char value[100];
+    } Field;
+
+void searchData(FILE* binaryFile){
+
+  if(binaryFile == NULL){
+    printf("Falha no processamento de arquivo.\n");
+    return;
+  }
+  
+  int n = 0;
+  scanf("%d", &n);
+
+  for(int i=0; i<n; i++){
+    int foundAtleastOne = 0;
+    int m = 0;
+    scanf("%d", &m);
+
+    Field field[m];
+
+    for(int j=0; j<m; j++){
+      scanf("%s", field[j].name);
+      ScanQuoteString(field[j].value);
+    }
+
+    //-> COMEÇAR A LER O ARQUIVO BINARIO, E ENCONTRAR OS QUE DÃO CERTO
+    //-> pra começar a ler, é necessario pular o cabeçalho, e ler sequencialmente até o fim do arquivo. fseek e registryToBinary
+    fseek(binaryFile, HEADER_SIZE, SEEK_SET);
+    Registry registry;
+
+    while(binaryToRegistry(&registry, binaryFile) == 1){
+
+      if(registry.removido == '0'){ //if the registry is not removed
+      int isEqual = 1; //1 if positive, 0 if NOT positive
+     //we search in it
+        for(int k=0; k<m; k++){
+
+          if(strcmp(field[k].name, "codEstacao") == 0 ){
+            if(registry.codEstacao != atoi(field[k].value)){
+              isEqual = 0;
+              break;
+            }
+          }
+
+          else if(strcmp(field[k].name, "codLinha") == 0)
+          {
+            if(registry.codLinha != atoi(field[k].value)){
+              isEqual = 0;
+              break;
+            }
+          }
+
+          else if(strcmp(field[k].name, "codProxEstacao") == 0)
+          {
+            if(registry.codProxEstacao != atoi(field[k].value)){
+              isEqual = 0;
+              break;
+          }
+        }
+
+          else if(strcmp(field[k].name, "distProxEstacao") == 0)
+          {
+            if(registry.distProxEstacao != atoi(field[k].value)){
+              isEqual = 0;
+              break;
+          }
+        }
+
+          else if(strcmp(field[k].name, "codLinhaIntegra") == 0)
+          {
+            if(registry.codLinhaIntegra != atoi(field[k].value)){
+              isEqual = 0;
+              break;
+          }
+        }
+
+          else if(strcmp(field[k].name, "codEstIntegra") == 0)
+          {
+            if(registry.codEstIntegra != atoi(field[k].value)){
+              isEqual = 0;
+              break;
+            }
+          }
+
+         else if(strcmp(field[k].name, "nomeEstacao") == 0)
+          {
+            if(registry.tamNomeEstacao == 0){
+              if(strcmp(field[k].value, "") != 0){
+                isEqual = 0;
+                break;
+              }
+            } else{
+                if(strcmp(registry.nomeEstacao, field[k].value) != 0){
+                  isEqual = 0; 
+                  break;
+                }
+              }
+          }
+
+          else if (strcmp(field[k].name, "nomeLinha") == 0) {
+              if (registry.tamNomeLinha == 0) {
+                  if (strcmp(field[k].value, "") != 0) {
+                      isEqual = 0; break;
+                  }
+              } else {
+                  if (strcmp(registry.nomeLinha, field[k].value) != 0) {
+                      isEqual = 0; 
+                      break;
+                  }
+              }
+          }
+
+        } //closes the 'k' loop
+
+        if(isEqual == 1){
+            printRegistry(&registry);
+            foundAtleastOne++;
+          }
+
+    } //closes the registry verifier 
+
+    freeRegistry(&registry);
+
+  } // closes the binaryToRegister function
+
+//-> binaryToRegistry (transformar cada registro)
+//-> E em cada um dos registros, procurar se o nome e valor são iguais.
+//Então isso teria que ser dentro do loop j
+if(foundAtleastOne == 0){
+          printf("Registro inexistente.\n");
+        }
+
+} //closes the 'i' loop.
+} //closes the searchData function.
 
 #endif

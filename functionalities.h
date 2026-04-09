@@ -26,9 +26,9 @@ Erro encontrado -> Falha no processamento do arquivo
 */
 
 
-int whereRegistryBinary(FILE* inputFileBinary, int n, char* nomeCampo, char* valorCampo);
+void searchData(FILE* binaryFile);
 
-int restoreRegistryBinary(FILE* inputfileBinary, int RRN);
+int restoreRegistryBinary(FILE* binaryFile, int RRN);
 
 
 #endif

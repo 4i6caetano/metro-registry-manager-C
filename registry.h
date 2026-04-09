@@ -37,7 +37,7 @@
  */
 typedef struct registry {
 
-  char removido; /**< (CHAR) Denotes if registry is logically removed('0' if NOT removed, '1' if removed). */
+  char removido; /**< (CHAR) '0' NOT removed, '1' REMOVED */
   int proximo; /**< (INT) storage the RRN of the next removed registry. */
 
   int codEstacao; /**< (INT) metro station's code. */
