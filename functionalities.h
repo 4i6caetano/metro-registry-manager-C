@@ -17,8 +17,7 @@
  * @param inputCSVFILE .csv file that contains values of the registry's fields. 
  * * @param outputBinaryFile .bin generated using the .csv file, written by binarioNaTela
  */
-int csvToMemory(FILE* inputCSVFile);
-
+int csvToBinary(FILE* inputCSVFile);
 
 int showData(FILE* inputFileBinary);
 /*-> Receber um binario, converter ele em string, e printar cada registro como uma linha, todo nulo deve ser NULO. 

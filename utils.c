@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include "utils.h"
 #include "registry.h"
+#include "header.h"
 
 
 /**
@@ -177,5 +178,77 @@ void fillRegistry(char* buffer, Registry *newRegistry){
       free(newRegistry->nomeLinha);
     }
   };
+
+  int binaryToRegistry(Registry* newRegistry, FILE* binaryFile){
+
+    if(binaryFile == NULL) return;
+
+    if (fread(&newRegistry->removido, sizeof(char), 1, binaryFile) != 1) {
+        return 0; 
+    }
+    
+        fread(&newRegistry->proximo, sizeof(int), 1, binaryFile);
+        fread(&newRegistry->codEstacao, sizeof(int), 1, binaryFile);
+        fread(&newRegistry->codLinha, sizeof(int), 1, binaryFile);
+        fread(&newRegistry->codProxEstacao, sizeof(int), 1, binaryFile);
+        fread(&newRegistry->distProxEstacao, sizeof(int), 1, binaryFile);
+        fread(&newRegistry->codLinhaIntegra, sizeof(int), 1, binaryFile);
+        fread(&newRegistry->codEstIntegra, sizeof(int), 1, binaryFile);
+
+        fread(&newRegistry->tamNomeEstacao, sizeof(int), 1, binaryFile);
+        
+        if(newRegistry->tamNomeEstacao > 0){
+        newRegistry->nomeEstacao = (char*) malloc(newRegistry->tamNomeEstacao + 1);
+        fread(newRegistry->nomeEstacao, sizeof(char), newRegistry->tamNomeEstacao, binaryFile);
+        newRegistry->nomeEstacao[newRegistry->tamNomeEstacao] = '\0';
+        }
+
+        fread(&newRegistry->tamNomeLinha, sizeof(int), 1, binaryFile);
+
+        if (newRegistry->tamNomeLinha > 0) {
+        newRegistry->nomeLinha = (char*) malloc(newRegistry->tamNomeLinha + 1);
+        fread(newRegistry->nomeLinha, sizeof(char), newRegistry->tamNomeLinha, binaryFile);
+        newRegistry->nomeLinha[newRegistry->tamNomeLinha] = '\0';
+        }
+        return 1;
+    }
+
+    void printRegistry(Registry* newRegistry){
+
+        if (newRegistry->codEstacao == -1) printf("NULO "); 
+        else printf("%d ", newRegistry->codEstacao);
+
+        if (newRegistry->tamNomeEstacao == 0) printf("NULO "); 
+        else printf("%s ", newRegistry->nomeEstacao);
+
+        if (newRegistry->codLinha == -1) printf("NULO "); 
+        else printf("%d ", newRegistry->codLinha);
+
+        if (newRegistry->tamNomeLinha == 0) printf("NULO "); 
+        else printf("%s ", newRegistry->nomeLinha);
+
+        if (newRegistry->codProxEstacao == -1) printf("NULO "); 
+        else printf("%d ", newRegistry->codProxEstacao);
+
+        if (newRegistry->distProxEstacao == -1) printf("NULO "); 
+        else printf("%d ", newRegistry->distProxEstacao);
+
+        if (newRegistry->codLinhaIntegra == -1) printf("NULO "); 
+        else printf("%d ", newRegistry->codLinhaIntegra);
+
+        if (newRegistry->codEstIntegra == -1) printf("NULO\n"); 
+        else printf("%d\n", newRegistry->codEstIntegra);
+}
+
+void freeRegistry(Registry* newRegistry) {
+    if(newRegistry->tamNomeEstacao > 0) {
+        free(newRegistry->nomeEstacao);  
+    }
+    if(newRegistry->tamNomeLinha > 0) {
+        free(newRegistry->nomeLinha);
+    }
+    newRegistry->nomeEstacao = NULL;
+    newRegistry->nomeLinha = NULL;
+}
 
 #endif
