@@ -2,8 +2,13 @@
 #define HEADER_H
 
 #define HEADER_SIZE 17
-#define STATUS_INCONSISTENT '1'
-#define STATUS_CONSISTENT '0'
+#define STATUS_CONSISTENT '1'
+#define STATUS_INCONSISTENT '0'
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 
 typedef struct header {
@@ -13,5 +18,8 @@ typedef struct header {
   int nroEstacoes; /**< (INT) indicates the quantity of varied stations storaged in the data file. */
   int nroParesEstacao; /**< (INT) indicates the quantity of different PAIRS (codEstacao, codProxEstacao) storaged in the data file. */
 } Header;
+
+void archiveOnChange(FILE* binaryFile);
+void archiveFinalized(FILE* binaryFile);
 
 #endif

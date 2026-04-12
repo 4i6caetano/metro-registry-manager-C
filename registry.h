@@ -1,10 +1,13 @@
 #ifndef REGISTRY_H
 #define REGISTRY_H
 
-#define IS_REMOVED 1
-#define IS_NOT_REMOVED -1
+#define IS_REMOVED '1'
+#define IS_NOT_REMOVED '0'
 
-#define DATA_REGISTRY_SIZE 80
+#define FOUND_RRN '0'
+#define DID_NOT_FIND_RRN '1'
+
+#define REGISTRY_SIZE 80
 
 #include <stdio.h>
 #include <string.h>

@@ -1,36 +1,35 @@
 #ifndef FUNCTIONALITIES_C
 #define FUNCTIONALITIES_C
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 #include "functionalities.h"
-#include "utils.h"
-#include "header.h"
+
 
 /**
  *@brief csvToMemory() is the first main function of the project. Utilizing the functions 'fillRegistry' and 'registryToBinary', it reads the .csv file contents into a buffer, transform it into a organized data structure of type Registry, and using this, converts all this data into a .bin file, ultimately, it prints the binary text created.
  * @param inputCSVFile .csv file containing the data, divided by its appropriate fields.
  */
-void csvToBinary(FILE* inputCSVFile){
+void csvToBinary(FILE* inputCSVFile, FILE* binaryFile){
   char buffer[8000];
   Registry newRegistry;
-  FILE* outputBinaryFile = fopen("estacoes.bin", "wb");
 
-  if(outputBinaryFile == NULL){
-    return;
+  if(inputCSVFile == NULL || binaryFile == NULL){
+    return FUNCTION_FAILURE;
   }
+
+  writeInitialHeader(&binaryFile);
+  int rrnCounter = 0;
 
     fgets(buffer, sizeof(buffer), inputCSVFile);
 
     while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
       fillRegistry(buffer, &newRegistry);
-      registryToBinary(&newRegistry, outputBinaryFile);
+      registryToBinary(&newRegistry, binaryFile);
+      rrnCounter++;
   }
 
-    fclose(outputBinaryFile);
-    BinarioNaTela("estacoes.bin");
+  updateFinalHeader(binaryFile, rrnCounter);
+
+  return FUNCTION_SUCESS; //SUCESS
 };
 
 /*
@@ -51,13 +50,13 @@ void showData(FILE* binaryFile){
 
   if(binaryFile == NULL){
     printf("Falha no processamento do arquivo.\n");
-    return;
+    return FUNCTION_FAILURE;
   }
 
   fseek(binaryFile, HEADER_SIZE, SEEK_SET);
 
-  while(binaryToRegistry(&newRegistry, binaryFile) == 1){
-    if(newRegistry.removido == '0'){
+  while(binaryToRegistry(&newRegistry, binaryFile) == BINARY_TO_REGISTRY_SUCESS){
+    if(newRegistry.removido == IS_NOT_REMOVED){
       printRegistry(&newRegistry);
       validRegistry++;
     }
@@ -70,24 +69,22 @@ if(validRegistry == 0){
   printf("Registro inexistente.\n");
 }
 
-fclose(binaryFile);
+  return FUNCTION_SUCESS; //SUCESS
 
 }
+
 
 typedef struct field{
       char name[100];
       char value[100];
     } Field;
 
-void searchData(FILE* binaryFile){
+void searchData(FILE* binaryFile, int n){
 
   if(binaryFile == NULL){
     printf("Falha no processamento de arquivo.\n");
     return;
   }
-  
-  int n = 0;
-  scanf("%d", &n);
 
   for(int i=0; i<n; i++){
     int foundAtleastOne = 0;
@@ -106,9 +103,9 @@ void searchData(FILE* binaryFile){
     fseek(binaryFile, HEADER_SIZE, SEEK_SET);
     Registry registry;
 
-    while(binaryToRegistry(&registry, binaryFile) == 1){
+    while(binaryToRegistry(&registry, binaryFile) == BINARY_TO_REGISTRY_SUCESS){
 
-      if(registry.removido == '0'){ //if the registry is not removed
+      if(registry.removido == IS_NOT_REMOVED){ //if the registry is not removed
       int isEqual = 1; //1 if positive, 0 if NOT positive
      //we search in it
         for(int k=0; k<m; k++){
@@ -187,6 +184,7 @@ void searchData(FILE* binaryFile){
                   }
               }
           }
+          
 
         } //closes the 'k' loop
 
@@ -201,14 +199,44 @@ void searchData(FILE* binaryFile){
 
   } // closes the binaryToRegister function
 
-//-> binaryToRegistry (transformar cada registro)
-//-> E em cada um dos registros, procurar se o nome e valor são iguais.
-//Então isso teria que ser dentro do loop j
-if(foundAtleastOne == 0){
-          printf("Registro inexistente.\n");
-        }
+  if(foundAtleastOne == 0){
+    printf("Registro inexistente.\n");
+    }
 
-} //closes the 'i' loop.
+  } //closes the 'i' loop.
 } //closes the searchData function.
+
+int searchByRRN(FILE* binaryFile, int RRN){
+  if(binaryFile == NULL){
+    printf("Falha no processamento do arquivo.\n");
+    return FUNCTION_FAILURE;
+  }
+
+  long offset = HEADER_SIZE + (RRN * 80);
+
+  fseek(binaryFile, offset, SEEK_SET);
+
+  Registry registry;
+  
+  if(binaryToRegistry(&registry, binaryFile) == BINARY_TO_REGISTRY_SUCESS){
+
+      if(registry.removido == IS_NOT_REMOVED){
+        printRegistry(&registry);
+        freeRegistry(&registry);
+        return FUNCTION_SUCESS;
+      } 
+      else {
+        printf("Registro inexistente.\n");
+        freeRegistry(&registry);
+        return FUNCTION_FAILURE;
+      }
+    }
+
+  else{
+    printf("Registro inexistente.\n");
+    return FUNCTION_FAILURE;
+  }
+
+}
 
 #endif

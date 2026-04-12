@@ -1,12 +1,6 @@
 #ifndef UTILS_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 #include "utils.h"
-#include "registry.h"
-#include "header.h"
 
 
 /**
@@ -184,7 +178,7 @@ void fillRegistry(char* buffer, Registry *newRegistry){
     if(binaryFile == NULL) return;
 
     if (fread(&newRegistry->removido, sizeof(char), 1, binaryFile) != 1) {
-        return 0; 
+        return BINARY_TO_REGISTRY_FAILURE; 
     }
     
         fread(&newRegistry->proximo, sizeof(int), 1, binaryFile);
@@ -202,6 +196,9 @@ void fillRegistry(char* buffer, Registry *newRegistry){
         fread(newRegistry->nomeEstacao, sizeof(char), newRegistry->tamNomeEstacao, binaryFile);
         newRegistry->nomeEstacao[newRegistry->tamNomeEstacao] = '\0';
         }
+        else{
+            newRegistry->nomeEstacao == NULL;
+        }
 
         fread(&newRegistry->tamNomeLinha, sizeof(int), 1, binaryFile);
 
@@ -210,7 +207,18 @@ void fillRegistry(char* buffer, Registry *newRegistry){
         fread(newRegistry->nomeLinha, sizeof(char), newRegistry->tamNomeLinha, binaryFile);
         newRegistry->nomeLinha[newRegistry->tamNomeLinha] = '\0';
         }
-        return 1;
+        else{
+            newRegistry->nomeLinha == NULL;
+        }
+
+        int countBytes = 37 + newRegistry->tamNomeEstacao + newRegistry->tamNomeLinha;
+        int memoryGarbage = 80 - countBytes;
+        
+        if(memoryGarbage > 0){
+            fseek(binaryFile, memoryGarbage, SEEK_CUR);
+        }
+
+        return BINARY_TO_REGISTRY_SUCESS;
     }
 
     void printRegistry(Registry* newRegistry){
