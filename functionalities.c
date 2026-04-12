@@ -8,7 +8,7 @@
  *@brief csvToMemory() is the first main function of the project. Utilizing the functions 'fillRegistry' and 'registryToBinary', it reads the .csv file contents into a buffer, transform it into a organized data structure of type Registry, and using this, converts all this data into a .bin file, ultimately, it prints the binary text created.
  * @param inputCSVFile .csv file containing the data, divided by its appropriate fields.
  */
-void csvToBinary(FILE* inputCSVFile, FILE* binaryFile){
+int csvToBinary(FILE* inputCSVFile, FILE* binaryFile){
   char buffer[8000];
   Registry newRegistry;
 
@@ -16,18 +16,35 @@ void csvToBinary(FILE* inputCSVFile, FILE* binaryFile){
     return FUNCTION_FAILURE;
   }
 
-  writeInitialHeader(&binaryFile);
+  writeInitialHeader(binaryFile);
   int rrnCounter = 0;
 
-    fgets(buffer, sizeof(buffer), inputCSVFile);
+  char** uniqueStations = malloc(5000 * sizeof(char*));
+  int numUniqueStations = 0;
 
-    while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
+  Pair* uniquePairs = malloc(5000* sizeof(Pair));
+  int numUniquePairs = 0;
+
+  fgets(buffer, sizeof(buffer), inputCSVFile);
+
+  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL){
       fillRegistry(buffer, &newRegistry);
+
+      if (newRegistry.tamNomeEstacao > 0) {
+          addUniqueStation(uniqueStations, &numUniqueStations, newRegistry.nomeEstacao);
+      }
+      addUniquePair(uniquePairs, &numUniquePairs, newRegistry.codEstacao, newRegistry.codProxEstacao);
+
+      // 2. DEPOIS GRAVAMOS E LIBERAMOS A MEMÓRIA (Uma vez só!)
       registryToBinary(&newRegistry, binaryFile);
       rrnCounter++;
   }
 
-  updateFinalHeader(binaryFile, rrnCounter);
+  updateFinalHeader(binaryFile, rrnCounter, numUniqueStations, numUniquePairs);
+
+  for(int i=0; i<numUniqueStations; i++) free(uniqueStations[i]);
+  free(uniqueStations);
+  free(uniquePairs);
 
   return FUNCTION_SUCESS; //SUCESS
 };
@@ -43,7 +60,7 @@ void csvToBinary(FILE* inputCSVFile, FILE* binaryFile){
 
 */
 
-void showData(FILE* binaryFile){
+int showData(FILE* binaryFile){
 
   Registry newRegistry;
   int validRegistry = 0;
@@ -82,7 +99,7 @@ typedef struct field{
 void searchData(FILE* binaryFile, int n){
 
   if(binaryFile == NULL){
-    printf("Falha no processamento de arquivo.\n");
+    printf("Falha no processamento do arquivo.\n");
     return;
   }
 
@@ -111,15 +128,22 @@ void searchData(FILE* binaryFile, int n){
         for(int k=0; k<m; k++){
 
           if(strcmp(field[k].name, "codEstacao") == 0 ){
-            if(registry.codEstacao != atoi(field[k].value)){
+
+            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+
+            if(registry.codEstacao != searchValue){
               isEqual = 0;
               break;
             }
+
           }
 
           else if(strcmp(field[k].name, "codLinha") == 0)
           {
-            if(registry.codLinha != atoi(field[k].value)){
+
+            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+
+            if(registry.codLinha != searchValue){
               isEqual = 0;
               break;
             }
@@ -127,31 +151,39 @@ void searchData(FILE* binaryFile, int n){
 
           else if(strcmp(field[k].name, "codProxEstacao") == 0)
           {
-            if(registry.codProxEstacao != atoi(field[k].value)){
+            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+
+            if(registry.codProxEstacao != searchValue){
               isEqual = 0;
               break;
-          }
+            }
         }
 
           else if(strcmp(field[k].name, "distProxEstacao") == 0)
           {
-            if(registry.distProxEstacao != atoi(field[k].value)){
+            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+
+            if(registry.distProxEstacao != searchValue){
               isEqual = 0;
               break;
-          }
+            }
+
         }
 
           else if(strcmp(field[k].name, "codLinhaIntegra") == 0)
           {
-            if(registry.codLinhaIntegra != atoi(field[k].value)){
+            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+
+            if(registry.codLinhaIntegra != searchValue){
               isEqual = 0;
               break;
-          }
+            }
         }
 
           else if(strcmp(field[k].name, "codEstIntegra") == 0)
           {
-            if(registry.codEstIntegra != atoi(field[k].value)){
+            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            if(registry.codEstIntegra != searchValue){
               isEqual = 0;
               break;
             }
@@ -202,6 +234,10 @@ void searchData(FILE* binaryFile, int n){
   if(foundAtleastOne == 0){
     printf("Registro inexistente.\n");
     }
+
+  if(i < n-1){
+    printf("\n");
+  }
 
   } //closes the 'i' loop.
 } //closes the searchData function.

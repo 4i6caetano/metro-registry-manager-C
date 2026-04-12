@@ -13,6 +13,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "utils.h"
+#include "header.h"
+#include "functionalities.h"
+
 /**
  * @brief The type Registry struct.
  * 
@@ -57,6 +61,12 @@ typedef struct registry {
   char* nomeLinha; /** (CHAR*) line's name: variable fields with fixed registry.  */
 
 } Registry;
+
+void fillRegistry(char* buffer, Registry *newRegistry);
+void registryToBinary(Registry *newRegistry, FILE* outputBinaryFile);
+int binaryToRegistry(Registry* newRegistry, FILE* binaryFile);
+void printRegistry(Registry* newRegistry);
+void freeRegistry(Registry* newRegistry);
 
 
 #endif

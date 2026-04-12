@@ -43,13 +43,14 @@ int main()
         if(binaryFile){
           fclose(binaryFile);
         }
+        break;
       }
 
       if(csvToBinary(inputCSVFile, binaryFile) == FUNCTION_SUCESS){
         fclose(inputCSVFile);
         fclose(binaryFile);
 
-        binarioNaTela(binaryFile);
+        BinarioNaTela(outputFile);
       }
       else{
         printf("Falha no processamento do arquivo.\n");
@@ -74,7 +75,7 @@ int main()
       char status;
       fread(&status, sizeof(char), 1, binaryFile);
 
-      if(status = STATUS_INCONSISTENT){
+      if(status == STATUS_INCONSISTENT){
         printf("Falha no processamento do arquivo.\n");
         fclose(binaryFile);
         break;

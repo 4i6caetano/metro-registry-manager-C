@@ -1,5 +1,5 @@
-run: build
-	./main
+all:
+	gcc -o programaTrab *.c
 
-build:
-	gcc *.c -o main -w
+run:
+	./programaTrab
