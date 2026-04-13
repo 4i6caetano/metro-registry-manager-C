@@ -35,7 +35,6 @@ int csvToBinary(FILE* inputCSVFile, FILE* binaryFile){
       }
       addUniquePair(uniquePairs, &numUniquePairs, newRegistry.codEstacao, newRegistry.codProxEstacao);
 
-      // 2. DEPOIS GRAVAMOS E LIBERAMOS A MEMÓRIA (Uma vez só!)
       registryToBinary(&newRegistry, binaryFile);
       rrnCounter++;
   }

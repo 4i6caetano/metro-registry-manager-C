@@ -76,9 +76,6 @@ void ScanQuoteString(char *str) {
 }
 
 
-/**
- * @brief Substitute function of strtok, read continuously a buffer until the file ends. Handle void fields and parse using ','.
- */
 char* getToken(char** buffer) {
     if (*buffer == NULL) return NULL;
     

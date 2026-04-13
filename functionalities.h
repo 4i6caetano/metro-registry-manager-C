@@ -12,25 +12,48 @@
 #include "utils.h"
 
 /**
- * @brief Logic: csv -> record in binary file, then show binary output
+ * @brief csvTobinary orchestrates the conversion of a .csv given file into a custom binary format, using the Registry type as it mould.
  * 
- * * Search:
- * - convert csv file to binary
- * - generation of binary file
- * *
+ * It begins writing an initial incosistent header, because the file is being changed.
+ * 
+ * As it reads each line, it populares a Registry type structure, using the fixed type sizes, and write them in the binary file.
+ * 
+ * Then, the records and header is updated.
  * @param inputCSVFILE .csv file that contains values of the registry's fields. 
- * * @param outputBinaryFile .bin generated using the .csv file, written by binarioNaTela
+ * * @param binaryFile .bin generated using the .csv file, written by binarioNaTela
  */
 int csvToBinary(FILE* inputCSVFile, FILE* binaryFile);
 
-int showData(FILE* binaryFile);
-/*-> Receber um binario, converter ele em string, e printar cada registro como uma linha, todo nulo deve ser NULO. 
-Caso não tenha registrtos -> Registro inexistente
-Erro encontrado -> Falha no processamento do arquivo
-*/
 
+/**
+ * @brief showData() is responsible for scanning sequentially a given binary file, and display all its valid records.
+ * 
+ * For each record, it checks if the record is active. If positive, it prints it fields separated by spaces, converting any null values to 'NULL'.
+ * 
+ * If nothing is found, prints "Registro inexistente."
+ * 
+ * @param binaryFile given binary file with the records.
+ */
+int showData(FILE* binaryFile);
+
+/**
+ * @brief searchData() allow the user to perform multiple searches using different filters. For each n search requests, it scans the entire file sequentially.
+ * 
+ * If there's no values, "NULO" is used. All matching and non-removed records are printed.
+ * 
+ * @param binaryFile given binaryFile to read from.
+ * @param n number of different searches the user wants.
+ */
 void searchData(FILE* binaryFile, int n);
 
+/**
+ * This function provides direct acess to a specific record using the Relative REcord Number, by the formula HEADER_SIZE + (RRN * REGISTRY_SIZE), and jumps to that position using fseek.
+ * 
+ * If not logically removed, display data.
+ * 
+ * @param binaryFile given binary file to be read from.
+ * @param RRN the Relative Record Number the user wants.
+ */
 int searchByRRN(FILE* binaryFile, int RRN);
 
 #endif

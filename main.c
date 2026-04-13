@@ -9,11 +9,11 @@
 #include "functionalities.h"
 
 typedef enum function {
-  _,
-  CSV_TO_BINARY,
-  SHOW_DATA,
-  SEARCH_DATA,
-  SEARCH_BY_RRN,
+  _, /**<void field, value of '0' */
+  CSV_TO_BINARY, /**<calls the csvToBinary() function. '1'. */
+  SHOW_DATA, /**<calls the showData() function. '2'. */
+  SEARCH_DATA, /**<calls the searchData() function. '3'. */
+  SEARCH_BY_RRN, /**<calls the searchByRRN() function. '4'. */
 } Function;
 
 int main()
