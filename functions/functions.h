@@ -47,6 +47,6 @@ void searchData(FILE *binaryFile, int n);
  */
 int searchByRRN(FILE *binaryFile, int RRN);
 
-// Functions implemented on the SECOND issue of the project
+// Functions implemented on the SECOND issue of the project.
 
 #endif
