@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 
+// Functions implemented on the FIRST issue of the project
+
 /**
  * @brief This function orchestrates the conversion of a .csv text file into a custom binary format. It begins by writing an initial *inconsistent header to protect the file during the process. As it reads each line from the CSV, it populates a Registry structure, identifies *unique station names and pairs to update the header, and writes the data into the binary file.
  *
@@ -44,5 +46,7 @@ void searchData(FILE *binaryFile, int n);
  * @param RRN the Relative Record Number the user wants.
  */
 int searchByRRN(FILE *binaryFile, int RRN);
+
+// Functions implemented on the SECOND issue of the project
 
 #endif
