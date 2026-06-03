@@ -7,21 +7,19 @@
 #include "header.h"
 #include "utils.h"
 
-/**
- * @brief csvToBinary() is the first main function of the project. Utilizing the functions 'fillRegistry' and 'registryToBinary', it reads the .csv file contents into a buffer, transform it into a organized data structure of type Registry, and using this, converts all this data into a .bin file, ultimately, it prints the binary text created.
- * @param inputCSVFile .csv file containing the data, divided by its appropriate fields.
- */
 int csvToBinary(FILE *inputCSVFile, FILE *binaryFile)
 {
   char buffer[8000];
-  Registry newRegistry;
+  Registry newRegistry; 
+
+    /* Initializates the buffer on which we'll temporarily store our information, and the Registry that will receive it.*/
 
   if (inputCSVFile == NULL || binaryFile == NULL)
   {
-    return FUNCTION_FAILURE;
+    return FUNCTION_FAILURE; // error handling.
   }
 
-  writeInitialHeader(binaryFile);
+  writeInitialHeader(binaryFile); /* writes the first memory allocation, the Header of the File*/
   int rrnCounter = 0;
 
   char **uniqueStations = malloc(5000 * sizeof(char *));
@@ -30,11 +28,14 @@ int csvToBinary(FILE *inputCSVFile, FILE *binaryFile)
   Pair *uniquePairs = malloc(5000 * sizeof(Pair));
   int numUniquePairs = 0;
 
-  fgets(buffer, sizeof(buffer), inputCSVFile);
+  fgets(buffer, sizeof(buffer), inputCSVFile); // reads the Header line and skips it.
 
-  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL)
+  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL) // While fgets can read the lines, it continuously keep doing that
   {
-    fillRegistry(buffer, &newRegistry);
+    newRegistry.nomeEstacao = NULL;
+    newRegistry.nomeLinha = NULL;
+
+    fillRegistry(buffer, &newRegistry); // fills the registry with that data
 
     if (newRegistry.tamNomeEstacao > 0)
     {
@@ -44,9 +45,9 @@ int csvToBinary(FILE *inputCSVFile, FILE *binaryFile)
 
     registryToBinary(&newRegistry, binaryFile);
     rrnCounter++;
-  }
+  } /* This works because fillRegistry used the sizes to determine what to save.*/
 
-  updateFinalHeader(binaryFile, rrnCounter, numUniqueStations, numUniquePairs);
+  updateFinalHeader(binaryFile, rrnCounter, numUniqueStations, numUniquePairs); //Ultimately, update the header so it can be up to date.
 
   for (int i = 0; i < numUniqueStations; i++)
     free(uniqueStations[i]);
@@ -54,20 +55,9 @@ int csvToBinary(FILE *inputCSVFile, FILE *binaryFile)
   free(uniquePairs);
 
   return FUNCTION_SUCESS; // SUCESS
-};
+}
 
-/*
--> abrir o arquivo em modo leitura binario
--> checagem de erro
-
-->pular o cabeçalho
--> ler por tamanho fixo os registros até o final de arquivo
--> para tamanho variavel -> ler o tamanho INT e pular essa quantidade
--> se for removido, ignorar.
-
-*/
-
-int showData(FILE *binaryFile)
+int displayValidRecords(FILE *binaryFile)
 {
 
   Registry newRegistry;
@@ -75,26 +65,26 @@ int showData(FILE *binaryFile)
 
   if (binaryFile == NULL)
   {
-    printf("Falha no processamento do arquivo.\n");
+    printf("Falha no processamento do arquivo.\n"); // Error handling
     return FUNCTION_FAILURE;
   }
 
-  fseek(binaryFile, HEADER_SIZE, SEEK_SET);
+  fseek(binaryFile, HEADER_SIZE, SEEK_SET);  /* points to the beggining of the file*/
 
-  while (binaryToRegistry(&newRegistry, binaryFile) == BINARY_TO_REGISTRY_SUCESS)
+  while (binaryToRegistry(&newRegistry, binaryFile) == BINARY_TO_REGISTRY_SUCESS) // while binaryToRegistry can read and convert, keep going
   {
     if (newRegistry.removido == IS_NOT_REMOVED)
     {
       printRegistry(&newRegistry);
-      validRegistry++;
+      validRegistry++; // adds validRegistry if its not removed
     }
 
-    freeRegistry(&newRegistry);
+    freeRegistry(&newRegistry); // frees the actual cursor.
   }
 
   if (validRegistry == 0)
   {
-    printf("Registro inexistente.\n");
+    printf("Registro inexistente.\n"); // Case there's no valid Registries.
   }
 
   return FUNCTION_SUCESS; // SUCESS
@@ -106,43 +96,46 @@ typedef struct field
   char value[100];
 } Field;
 
-void searchData(FILE *binaryFile, int n)
+void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of independent searches the user wants.
 {
 
   if (binaryFile == NULL)
   {
-    printf("Falha no processamento do arquivo.\n");
+    printf("Falha no processamento do arquivo.\n"); // Error handling
     return;
   }
 
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) // This loop is responsible for each independent search the user asked for, defined by 'n'.
   {
-    int foundAtleastOne = 0;
-    int m = 0;
+    int foundAtleastOne = 0; // a flag. if it finds atleast one match on the record, it is incremented.
+    int m = 0; // The number of filters the user wants to aplly on this specific search.
     scanf("%d", &m);
 
-    Field field[m];
+    Field field[m]; // Creates an array of fields, the 'filters'.
 
     for (int j = 0; j < m; j++)
     {
-      scanf("%s", field[j].name);
-      ScanQuoteString(field[j].value);
+      scanf("%s", field[j].name); // reads the target's name, like "codEstacao"
+      ScanQuoteString(field[j].value); // captures the target value.
     }
 
-    //-> COMEÇAR A LER O ARQUIVO BINARIO, E ENCONTRAR OS QUE DÃO CERTO
-    //-> pra começar a ler, é necessario pular o cabeçalho, e ler sequencialmente até o fim do arquivo. fseek e registryToBinary
-    fseek(binaryFile, HEADER_SIZE, SEEK_SET);
+    fseek(binaryFile, HEADER_SIZE, SEEK_SET); // Starting from header_size, defines the cursor after it.
     Registry registry;
 
-    while (binaryToRegistry(&registry, binaryFile) == BINARY_TO_REGISTRY_SUCESS)
+    while (binaryToRegistry(&registry, binaryFile) == BINARY_TO_REGISTRY_SUCESS) //while binaryToRegistry converts the data of the FILE to our RAM is sucess, do it.
     {
 
-      if (registry.removido == IS_NOT_REMOVED)
+      if (registry.removido == IS_NOT_REMOVED) // checks if removed
       {                  // if the registry is not removed
         int isEqual = 1; // 1 if positive, 0 if NOT positive
         // we search in it
+
+        /* This drives the file pointer through the disk. It reads the 80-byte block, extract its variables from the FILE, allocate memory for variable-length strings,
+        populates registry and skips the garbage bytes via SEEK_CUR. Returns SUCESS until hits EOF.*/
         for (int k = 0; k < m; k++)
         {
+
+          /* compares each user filter against the fields of the active registries.*/
 
           if (strcmp(field[k].name, "codEstacao") == 0)
           {
@@ -253,9 +246,12 @@ void searchData(FILE *binaryFile, int n)
 
         } // closes the 'k' loop
 
-        if (isEqual == 1)
+        /* If the record survived the k loop without 'break', it satisfies the criteria. The program calls printRegistry()
+        and increments our sucessful match counter. */
+
+        if (isEqual == 1) 
         {
-          printRegistry(&registry);
+          printRegistry(&registry); // Print the registry found.
           foundAtleastOne++;
         }
 

@@ -2,28 +2,29 @@
 #define REGISTRYUTILS_H
 
 /**
- * @brief This function, used along with getToken(). The latter is responsible for continuously reading the .csv file by updating its token, and as it runs through the file, it fills the Registry type variable accordingly, using its fixed size nature.
+ * @brief The files are predetermined in order. In consequence of that, this function fills continuously the registry using their order and size to  place them on the proper field.
+ * It uses the function getToken() sequentially as an util.
  * @param buffer The buffer (filled up by getToken).
  * @param newRegistry the Registry type variable that will obtain the data.
  */
 void fillRegistry(char *buffer, Registry *newRegistry);
 
 /**
- * @brief registryToBinary() has the role of converting a given Registry type into a ready-to-read .bin file.
- *
- * It uses the method of the fwrite() function to collect the specific fields of the Registryn type and write it in order, using the fixed size nature of the registries.
- * The header size is also taken into account and adressed.
+ * @brief 
+ * Converts the fields of a given registry into a readable binary file.
+ * It uses the method of the fwrite() sequentially to write in order, using their sizes as guidance. Adress variable sized fields too.
+ * The rest of the archive is converted into garbage '$'.
  * @param newRegistry Registry type variable.
  * @param outputBinaryFile .bin file that will be created / written on.
  */
 void registryToBinary(Registry *newRegistry, FILE *outputBinaryFile);
 
 /**
- * @brief binaryToRegistry() has the role of using a given .bin file, read its contents, and allocate the right data in the right fields of the type Register.
+ * @brief binaryToRegistry() has the role of using a given .bin file, read its contents, and allocates the data accordingly by their sizes.
  *
- * It uses the fread() function considerating the fixed size of the registries. Data conversion also happens
+ * It used the fread() sequentially to read the information from the FILE and save it on the right fields.
  *
- * NULL fields, header size and some other problems are taken into account.
+ * Garbage and void fields are taken into account.
  *
  * @param newRegistry Registry type variable.
  * @param binaryFile binary file that will be read on.
@@ -31,9 +32,8 @@ void registryToBinary(Registry *newRegistry, FILE *outputBinaryFile);
 int binaryToRegistry(Registry *newRegistry, FILE *binaryFile);
 
 /**
- * printRegistry() has the role of printing on screen a full registry.
- *
- * It receives a pointer and reads the registry contents. Using booleans, we verify if the data exists and if its '-1' (NULL), writing according to it.
+ * Prints into the terminal the whole Registry information.
+ * First, we verify if the data exists. If it does, we write extracting the information directly from the Registry adress using printf().
  * @param newRegistry Registry type variable.
  */
 void printRegistry(Registry *newRegistry);

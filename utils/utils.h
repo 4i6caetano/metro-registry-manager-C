@@ -1,30 +1,26 @@
 #ifndef UTILS_H
 
 /**
- * @brief Reads and print a .bin file in the terminal.
+ * @brief Catches the name of the binary FILE we want to print onto the screen, and reads it until the EOF, saving it into
+ * a buffer. In the end, it prints out the binary in the terminal.
  */
 void BinarioNaTela(char *arquivo);
 
 /**
  * @brief
- *	Use essa função para ler um campo string delimitado entre aspas (").
- *	Chame ela na hora que for ler tal campo. Por exemplo:
- *
- *	A entrada está da seguinte forma:
- *		nomeDoCampo "MARIA DA SILVA"
- *
- *	Para ler isso para as strings já alocadas str1 e str2 do seu programa,
- * você faz: scanf("%s", str1); -> Vai salvar nomeDoCampo em str1
- *		scan_quote_string(str2); -> Vai salvar MARIA DA SILVA em str2
- * (sem as aspas)
- *
+ * Serves with the sole purpose to read user's input and handling it accordingly, using getchar() to navigate.
+ * Changes directly the memory of the string it receives. Handles:
+ * 1. Invalid chars.
+ * 2. fields of NULO.
+ * 3. Words with space.
  */
 void ScanQuoteString(char *str);
 
 /**
- * @brief getToken() is used as a substitute with some additions to the function strtok(), as it was made to include the reading of 'null' elements in the .csv file.
+ * @brief This function is responsible for returning every 'token' (word) of the .csv file, delimited by commas. It reads until the first
+ * comma occurence, returns the word, and then continues until EOF.
  *
- * This function pick up the data from the .csv file and save it into a buffer.
+ * getToken() is used as a substitute with some additions to the function strtok(), as it was made to include the reading of 'null' elements in the .csv file.
  */
 char *getToken(char **buffer);
 

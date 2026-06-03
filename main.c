@@ -24,98 +24,99 @@ int main()
   if (scanf("%d", &whichFunction) != 1)
     return 0;
 
-  char inputFile[100];
+  char inputFile[100]; // Simply creates an array to receive the file's name.
   char outputFile[100];
 
   switch (whichFunction)
   {
-  case CSV_TO_BINARY:
-  {
-    scanf("%s %s", inputFile, outputFile);
-
-    FILE *inputCSVFile = fopen(inputFile, "r");
-    FILE *binaryFile = fopen(outputFile, "wb");
-
-    if (inputCSVFile == NULL || binaryFile == NULL)
+    case CSV_TO_BINARY:
     {
-      printf("Falha no processamento do arquivo.\n");
+      scanf("%s %s", inputFile, outputFile);
 
-      if (inputCSVFile)
+      FILE *inputCSVFile = fopen(inputFile, "r");
+      FILE *binaryFile = fopen(outputFile, "wb");
+
+      if (inputCSVFile == NULL || binaryFile == NULL) // Error handling
+      {
+        printf("Falha no processamento do arquivo.\n");
+
+        if (inputCSVFile)
+        {
+          fclose(inputCSVFile);
+        }
+
+        if (binaryFile)
+        {
+          fclose(binaryFile);
+        }
+        break; // If the error is caught, close the archives and print error case.
+      }
+
+      if (csvToBinary(inputCSVFile, binaryFile) == FUNCTION_SUCESS)
       {
         fclose(inputCSVFile);
-      }
-
-      if (binaryFile)
-      {
         fclose(binaryFile);
+
+        BinarioNaTela(outputFile); // If the function run without problems, it closes the file and print the binary converted from CSV into the screen.
+      }
+      else
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(inputCSVFile);
+        fclose(binaryFile); //Else, signals error and close the files.
       }
       break;
     }
 
-    if (csvToBinary(inputCSVFile, binaryFile) == FUNCTION_SUCESS)
+    case SHOW_DATA:
+    case SEARCH_DATA:
+    case SEARCH_BY_RRN: //Grouped together for the reason of same inputs.
     {
-      fclose(inputCSVFile);
-      fclose(binaryFile);
 
-      BinarioNaTela(outputFile);
-    }
-    else
-    {
-      printf("Falha no processamento do arquivo.\n");
-      fclose(inputCSVFile);
-      fclose(binaryFile);
-    }
-    break;
-  }
+      scanf("%s", inputFile);
 
-  case SHOW_DATA:
-  case SEARCH_DATA:
-  case SEARCH_BY_RRN:
-  {
+      FILE *binaryFile = fopen(inputFile, "rb"); //creates the FILE variable and inserts the designated file onto it.
 
-    scanf("%s", inputFile);
+      if (binaryFile == NULL)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        break;
+      } //Error handling
 
-    FILE *binaryFile = fopen(inputFile, "rb");
-    if (binaryFile == NULL)
-    {
-      printf("Falha no profcessamento do arquivo.\n");
+      char status;
+      fread(&status, sizeof(char), 1, binaryFile); //Reads the 'status' from the header to check if consistent.
+
+      if (status == STATUS_INCONSISTENT) // Inconsistent = error handling.
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        break;
+      }
+
+      if (whichFunction == SHOW_DATA) // If the function chosen is showData(), runs it.
+      {
+        showData(binaryFile);
+      }
+
+      else if (whichFunction == SEARCH_DATA) // If the function is searchData(), take the n researches and runs it.
+      {
+        int n;
+        scanf("%d", &n);
+        searchData(binaryFile, n);
+      }
+      else if (whichFunction == SEARCH_BY_RRN) // If its searchByRRN(), get the RRN value and runs it.
+      {
+        int rrn;
+        scanf("%d", &rrn);
+        searchByRRN(binaryFile, rrn);
+      }
+
+      fclose(binaryFile); //In the end, regardless of input, closes all the files as expected.
       break;
     }
-
-    char status;
-    fread(&status, sizeof(char), 1, binaryFile);
-
-    if (status == STATUS_INCONSISTENT)
-    {
-      printf("Falha no processamento do arquivo.\n");
-      fclose(binaryFile);
+    default:
+      printf("Operação inválida.\n"); // Default is responsible for error handling.
       break;
-    }
-
-    if (whichFunction == SHOW_DATA)
-    {
-      showData(binaryFile);
-    }
-
-    else if (whichFunction == SEARCH_DATA)
-    {
-      int n;
-      scanf("%d", &n);
-      searchData(binaryFile, n);
-    }
-    else if (whichFunction == SEARCH_BY_RRN)
-    {
-      int rrn;
-      scanf("%d", &rrn);
-      searchByRRN(binaryFile, rrn);
-    }
-
-    fclose(binaryFile);
-    break;
-  }
-  default:
-    printf("Operação inválida.\n");
-    break;
   }
 
   return 0;
