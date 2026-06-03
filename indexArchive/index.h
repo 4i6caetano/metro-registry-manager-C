@@ -8,7 +8,7 @@
 
 typedef struct indexHeader
 {
-    char status;
+    char status; /**< changed to INCONSISTENT '0' when the file is altered, then CONSISTENT '1' when the process is done. */
 } IndexHeader;
 
 typedef struct index 
