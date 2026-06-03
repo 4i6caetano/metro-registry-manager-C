@@ -11,7 +11,7 @@ typedef enum function
 {
   _,             /**<void field, value of '0' */
   CSV_TO_BINARY, /**<calls the csvToBinary() function. '1'. */
-  SHOW_DATA,     /**<calls the showData() function. '2'. */
+  DISPLAY_VALID_RECORDS,     /**<calls the displayValidRecords() function. '2'. */
   SEARCH_DATA,   /**<calls the searchData() function. '3'. */
   SEARCH_BY_RRN, /**<calls the searchByRRN() function. '4'. */
 } Function;
@@ -68,7 +68,7 @@ int main()
       break;
     }
 
-    case SHOW_DATA:
+    case DISPLAY_VALID_RECORDS:
     case SEARCH_DATA:
     case SEARCH_BY_RRN: //Grouped together for the reason of same inputs.
     {
@@ -93,9 +93,9 @@ int main()
         break;
       }
 
-      if (whichFunction == SHOW_DATA) // If the function chosen is showData(), runs it.
+      if (whichFunction == DISPLAY_VALID_RECORDS) // If the function chosen is displayValidRecords(), runs it.
       {
-        showData(binaryFile);
+        displayValidRecords(binaryFile);
       }
 
       else if (whichFunction == SEARCH_DATA) // If the function is searchData(), take the n researches and runs it.
