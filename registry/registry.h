@@ -13,7 +13,7 @@
 #define REGISTRY_SIZE 80
 
 /**
- * @brief The type Registry struct.
+ * @brief Type Registry struct.
  */
 typedef struct registry {
 
