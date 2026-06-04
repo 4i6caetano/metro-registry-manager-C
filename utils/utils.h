@@ -24,4 +24,6 @@ void ScanQuoteString(char *str);
  */
 char *getToken(char **buffer);
 
+int compareCodEstacao(const void *a, const void *b);
+
 #endif

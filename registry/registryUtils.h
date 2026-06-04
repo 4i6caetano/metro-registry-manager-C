@@ -20,7 +20,7 @@ void fillRegistry(char *buffer, Registry *newRegistry);
 void registryToBinary(Registry *newRegistry, FILE *outputBinaryFile);
 
 /**
- * @brief binaryToRegistry() has the role of using a given .bin file, read its contents, and allocates the data accordingly by their sizes.
+ * @brief binaryToRegistry() has the role of using a given BINARY file, read its contents, and allocates the data on RAM accordingly.
  *
  * It used the fread() sequentially to read the information from the FILE and save it on the right fields.
  *

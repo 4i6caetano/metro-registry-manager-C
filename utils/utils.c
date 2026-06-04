@@ -4,6 +4,7 @@
 #include <ctype.h>
 
 #include "utils.h"
+#include "index.h"
 
 void BinarioNaTela(char *arquivo)
 {
@@ -94,3 +95,12 @@ char *getToken(char **buffer)
 
     return tokenStart; /** As this is a pointer, it changes the characters directly into the buffer's memory. So, we return the word, and then tokenStart inititates onto the next word. */
 }
+
+int compareCodEstacao(const void *a, const void *b)
+{
+    const Index *valueA = (Index *) a;
+    const Index *valueB = (Index *) b;
+
+    return (valueA->codEstacao - valueB->codEstacao);
+}
+

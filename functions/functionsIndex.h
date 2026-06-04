@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-void createPrimaryIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive );
+void createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIndexArchive );
 
 void restoreIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, int numberOfSearches );
 
