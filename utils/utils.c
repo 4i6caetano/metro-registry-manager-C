@@ -104,3 +104,33 @@ int compareCodEstacao(const void *a, const void *b)
     return (valueA->codEstacao - valueB->codEstacao);
 }
 
+int binarySearchOnIndex(Index *indexArray, int size, int targetKey) 
+{
+    int start = 0;
+    int end = size - 1;
+
+    while (start <= end) 
+    {
+        int middle = start + (end - start) / 2;
+
+        // Se encontramos o código da estação no índice
+        if (indexArray[middle].codEstacao == targetKey) 
+        {
+            return indexArray[middle].RRN; // Retorna o prêmio: o RRN!
+        }
+
+        // Se o código procurado for maior, descarta a metade esquerda
+        if (indexArray[middle].codEstacao < targetKey) 
+        {
+            start = middle + 1;
+        }
+        // Se o código procurado for menor, descarta a metade direita
+        else 
+        {
+            end = middle - 1;
+        }
+    }
+
+    return -1; // Retorna -1 caso o codEstacao não exista no índice
+}
+

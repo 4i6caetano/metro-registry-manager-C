@@ -26,4 +26,19 @@ char *getToken(char **buffer);
 
 int compareCodEstacao(const void *a, const void *b);
 
+
+    /** 
+    * @brief 
+    * nameOfTheField[100];
+    *  
+    * valueOfTheField[100]; 
+    * */
+    typedef struct field
+    {
+        char nameOfTheField[100];
+        char valueOfTheField[100];
+    } Field;
+
+int binarySearchOnIndex(Index *indexArray, int size, int targetKey);
+
 #endif
