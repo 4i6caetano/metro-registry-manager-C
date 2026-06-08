@@ -49,4 +49,6 @@ int binarySearchOnIndex(Index *indexArray, int size, int targetKey);
 
 void sequentialSearchInRegister(Registry temporaryRegister, FILE *registryBinaryFile, int numberOfFiltersApplied, Field *fieldsToBeSearched, int *registersThatFulfillTheSearch);
 
+void singleSearchInRegister(Registry temporaryRegister, FILE *registryBinaryFile, Field *fieldsToBeSearched, int numberOfFiltersApplied, int *registersThatFulfillTheSearch);
+
 #endif

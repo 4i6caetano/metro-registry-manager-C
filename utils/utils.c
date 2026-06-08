@@ -253,19 +253,147 @@ void sequentialSearchInRegister(Registry temporaryRegister, FILE *registryBinary
                     }
                 }
                 
-
-            }
+            } // filter loop
 
             if (searchSucess == SEARCH_SUCESS)
-                {
-                    printRegistry(&temporaryRegister);
-                    (*registersThatFulfillTheSearch)++;
-                }
+            {
+                printRegistry(&temporaryRegister);
+                (*registersThatFulfillTheSearch)++;
+            }
 
         }
 
+        freeRegistry(&temporaryRegister);
         /* After gathering the fields we must filter, we start this specific search*/
-    }
+    } // while loop
+}
 
-    return registersThatFulfillTheSearch;
+void singleSearchInRegister(Registry temporaryRegister, FILE *registryBinaryFile, Field *fieldsToBeSearched, int numberOfFiltersApplied, int *registersThatFulfillTheSearch)
+{
+    int searchSucess;
+
+    if (binaryToRegistry(&temporaryRegister, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS)
+    {
+        if(temporaryRegister.removido == IS_NOT_REMOVED)
+        {
+            searchSucess = SEARCH_SUCESS;
+            for (int searchForEachFilter = 0; searchForEachFilter < numberOfFiltersApplied; searchForEachFilter++)
+            {
+
+
+                if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "proximo") == 0)
+                { // if true, it means this is the filter we want! now we compare its values with each register value
+                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
+                    if (temporaryRegister.proximo != value)
+                    {
+                        searchSucess = SEARCH_FAILURE;
+                        break;
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codLinha") == 0)
+                {
+                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
+                    if (temporaryRegister.codLinha != value)
+                    {
+                        searchSucess = SEARCH_FAILURE;
+                        break;
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codProxEstacao") == 0)
+                {
+                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
+                    if (temporaryRegister.codProxEstacao != value)
+                    {
+                        searchSucess = SEARCH_FAILURE;
+                        break;
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "distProxEstacao") == 0)
+                {
+                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
+                    if (temporaryRegister.distProxEstacao != value)
+                    {
+                        searchSucess = SEARCH_FAILURE;
+                        break;
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codLinhaIntegra") == 0)
+                {
+                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
+                    if (temporaryRegister.codLinhaIntegra != value)
+                    {
+                        searchSucess = SEARCH_FAILURE;
+                        break;
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codEstIntegra") == 0)
+                {
+                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
+
+                    if (temporaryRegister.codEstIntegra != value)
+                    {
+                        searchSucess = SEARCH_FAILURE;
+                        break;
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "nomeEstacao") == 0)
+                {
+                    if (temporaryRegister.tamNomeEstacao == 0)
+                    {
+                        if (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") != 0)
+                        {
+                            searchSucess = SEARCH_FAILURE;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (strcmp(temporaryRegister.nomeEstacao, fieldsToBeSearched[searchForEachFilter].valueOfTheField) != 0)
+                        {
+                            searchSucess = SEARCH_FAILURE;
+                            break;
+                        }
+                    }
+                }
+
+                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "nomeLinha") == 0)
+                {
+                    if (temporaryRegister.tamNomeLinha == 0)
+                    {
+                        if (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") != 0)
+                        {
+                            searchSucess = SEARCH_FAILURE;
+                            break;
+                        }
+                    }
+
+                    else
+                    {
+                        if (strcmp(temporaryRegister.nomeLinha, fieldsToBeSearched[searchForEachFilter].valueOfTheField) != 0)
+                        {
+                            searchSucess = SEARCH_FAILURE;
+                            break;
+                        }
+                    }
+                }
+                
+            } // filter loop
+
+            if (searchSucess == SEARCH_SUCESS)
+            {
+                printRegistry(&temporaryRegister);
+                (*registersThatFulfillTheSearch)++;
+            }
+
+        }
+
+        freeRegistry(&temporaryRegister);
+        /* After gathering the fields we must filter, we start this specific search*/
+    } // while loop
 }

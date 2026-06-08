@@ -154,7 +154,7 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
                 int byteOffset = HEADER_SIZE + (foundRRN * 80);
                 fseek(registryBinaryFile, byteOffset, SEEK_SET);
 
-                sequentialSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, &fieldsToBeSearched, &registersThatFulfillTheSearch);
+                singleSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, fieldsToBeSearched, &registersThatFulfillTheSearch);
             }
         }
 
@@ -162,11 +162,9 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
 
         fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
 
-        sequentialSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, &fieldsToBeSearched, &registersThatFulfillTheSearch);
+        sequentialSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, fieldsToBeSearched, &registersThatFulfillTheSearch);
 
         }
-
-        freeRegistry(&temporaryRegister);
     }
 
     return registersThatFulfillTheSearch;
