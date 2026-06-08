@@ -6,14 +6,29 @@
 #include "registry.h"
 #include "utils.h"
 #include "functions.h"
+#include "functionsIndex.h"
+#include "index.h"
 
 typedef enum function
 {
+<<<<<<< Updated upstream
   _,             /**<void field, value of '0' */
   CSV_TO_BINARY, /**<calls the csvToBinary() function. '1'. */
   SHOW_DATA,     /**<calls the showData() function. '2'. */
   SEARCH_DATA,   /**<calls the searchData() function. '3'. */
   SEARCH_BY_RRN, /**<calls the searchByRRN() function. '4'. */
+=======
+  _,                        /**< campo vazio, valor '0' */
+  CSV_TO_BINARY,            /**< chama csvToBinary(). '1'. */
+  DISPLAY_VALID_RECORDS,    /**< chama displayValidRecords(). '2'. */
+  SEARCH_DATA,              /**< chama searchData(). '3'. */
+  SEARCH_BY_RRN,            /**< chama searchByRRN(). '4'. */
+  CREATE_PRIMARY_INDEX,     /**< chama createPrimaryIndexArchive(). '5'. */
+  SEARCH_WITH_INDEX,        /**< chama restoreIndexArchive(). '6'. */
+  REMOVE_WITH_INDEX,        /**< chama removeIndexArchive(). '7'. */
+  INSERT_WITH_INDEX,        /**< chama insertNewIndexArchive(). '8'. */
+  UPDATE_WITH_INDEX,        /**< chama updateIndexArchive(). '9'. */
+>>>>>>> Stashed changes
 } Function;
 
 int main()
@@ -114,8 +129,270 @@ int main()
       fclose(binaryFile); //In the end, regardless of input, closes all the files as expected.
       break;
     }
+    case CREATE_PRIMARY_INDEX:
+    {
+      /* [5] Entrada: arquivoEntrada.bin arquivoIndicePrimario.bin */
+      char indexFile[100];
+      scanf("%s %s", inputFile, indexFile);
+
+      FILE *binaryFile   = fopen(inputFile, "rb");
+      FILE *indexBinFile = fopen(indexFile, "wb"); /* cria o arquivo de índice do zero */
+
+      if (binaryFile == NULL || indexBinFile == NULL)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        if (binaryFile)   fclose(binaryFile);
+        if (indexBinFile) fclose(indexBinFile);
+        break;
+      }
+
+      /* verifica se o arquivo de dados está consistente antes de indexar */
+      char status;
+      fread(&status, sizeof(char), 1, binaryFile);
+      if (status == STATUS_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(binaryFile, 0, SEEK_SET);
+
+      if (createPrimaryIndexArchive(binaryFile, indexBinFile) == FUNCTION_SUCESS)
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        BinarioNaTela(indexFile);
+      }
+      else
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+      }
+      break;
+    }
+
+    case SEARCH_WITH_INDEX:
+    {
+      /* [6] Entrada: arquivoEntrada.bin arquivoIndicePrimario.bin n */
+      char indexFile[100];
+      int n;
+      scanf("%s %s %d", inputFile, indexFile, &n);
+
+      FILE *binaryFile   = fopen(inputFile, "rb");
+      FILE *indexBinFile = fopen(indexFile, "rb");
+
+      if (binaryFile == NULL || indexBinFile == NULL)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        if (binaryFile)   fclose(binaryFile);
+        if (indexBinFile) fclose(indexBinFile);
+        break;
+      }
+
+      /* verifica o status do arquivo de dados */
+      char statusDados;
+      fread(&statusDados, sizeof(char), 1, binaryFile);
+      if (statusDados == STATUS_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(binaryFile, 0, SEEK_SET);
+
+      /* verifica o status do arquivo de índice */
+      char statusIndice;
+      fread(&statusIndice, sizeof(char), 1, indexBinFile);
+      if (statusIndice == INDEX_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(indexBinFile, 0, SEEK_SET);
+
+      restoreIndexArchive(binaryFile, indexBinFile, n);
+      fclose(binaryFile);
+      fclose(indexBinFile);
+      break;
+    }
+
+    case REMOVE_WITH_INDEX:
+    {
+      /* [7] Entrada: arquivoEntrada.bin arquivoIndicePrimario.bin n */
+      char indexFile[100];
+      int n;
+      scanf("%s %s %d", inputFile, indexFile, &n);
+
+      FILE *binaryFile   = fopen(inputFile, "r+b");
+      FILE *indexBinFile = fopen(indexFile, "r+b");
+
+      if (binaryFile == NULL || indexBinFile == NULL)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        if (binaryFile)   fclose(binaryFile);
+        if (indexBinFile) fclose(indexBinFile);
+        break;
+      }
+
+      /* verifica o status do arquivo de dados */
+      char statusDados;
+      fread(&statusDados, sizeof(char), 1, binaryFile);
+      if (statusDados == STATUS_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(binaryFile, 0, SEEK_SET);
+
+      /* verifica o status do arquivo de índice */
+      char statusIndice;
+      fread(&statusIndice, sizeof(char), 1, indexBinFile);
+      if (statusIndice == INDEX_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(indexBinFile, 0, SEEK_SET);
+
+      if (removeIndexArchive(binaryFile, indexBinFile, n) == FUNCTION_SUCESS)
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        BinarioNaTela(inputFile);
+        BinarioNaTela(indexFile);
+      }
+      else
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+      }
+      break;
+    }
+
+    case INSERT_WITH_INDEX:
+    {
+      /* [8] Entrada: arquivoEntrada.bin arquivoIndicePrimario.bin n */
+      char indexFile[100];
+      int n;
+      scanf("%s %s %d", inputFile, indexFile, &n);
+
+      FILE *binaryFile   = fopen(inputFile, "r+b");
+      FILE *indexBinFile = fopen(indexFile, "r+b");
+
+      if (binaryFile == NULL || indexBinFile == NULL)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        if (binaryFile)   fclose(binaryFile);
+        if (indexBinFile) fclose(indexBinFile);
+        break;
+      }
+
+      /* verifica o status do arquivo de dados */
+      char statusDados;
+      fread(&statusDados, sizeof(char), 1, binaryFile);
+      if (statusDados == STATUS_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(binaryFile, 0, SEEK_SET);
+
+      /* verifica o status do arquivo de índice */
+      char statusIndice;
+      fread(&statusIndice, sizeof(char), 1, indexBinFile);
+      if (statusIndice == INDEX_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(indexBinFile, 0, SEEK_SET);
+
+      if (insertNewIndexArchive(binaryFile, indexBinFile, n) == FUNCTION_SUCESS)
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        BinarioNaTela(inputFile);
+        BinarioNaTela(indexFile);
+      }
+      else
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+      }
+      break;
+    }
+
+    case UPDATE_WITH_INDEX:
+    {
+      /* [9] Entrada: arquivoEntrada.bin arquivoIndicePrimario.bin n */
+      char indexFile[100];
+      int n;
+      scanf("%s %s %d", inputFile, indexFile, &n);
+
+      FILE *binaryFile   = fopen(inputFile, "r+b");
+      FILE *indexBinFile = fopen(indexFile, "r+b");
+
+      if (binaryFile == NULL || indexBinFile == NULL)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        if (binaryFile)   fclose(binaryFile);
+        if (indexBinFile) fclose(indexBinFile);
+        break;
+      }
+
+      /* verifica o status do arquivo de dados */
+      char statusDados;
+      fread(&statusDados, sizeof(char), 1, binaryFile);
+      if (statusDados == STATUS_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(binaryFile, 0, SEEK_SET);
+
+      /* verifica o status do arquivo de índice */
+      char statusIndice;
+      fread(&statusIndice, sizeof(char), 1, indexBinFile);
+      if (statusIndice == INDEX_INCONSISTENT)
+      {
+        printf("Falha no processamento do arquivo.\n");
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        break;
+      }
+      fseek(indexBinFile, 0, SEEK_SET);
+
+      if (updateIndexArchive(binaryFile, indexBinFile, n) == FUNCTION_SUCESS)
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+        BinarioNaTela(inputFile);
+        BinarioNaTela(indexFile);
+      }
+      else
+      {
+        fclose(binaryFile);
+        fclose(indexBinFile);
+      }
+      break;
+    }
+
     default:
-      printf("Operação inválida.\n"); // Default is responsible for error handling.
+      printf("Operação inválida.\n");
       break;
   }
 
