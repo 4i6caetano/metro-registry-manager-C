@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "header.h"
 #include "registry.h"
+#include "functions.h"
 
 /* Crie um arquivo de índice primário para um arquivo de dados de entrada. O arquivo
 de índice primário deve ser gerado de acordo com as especificações da Descrição do
@@ -94,7 +95,7 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
     if(registryBinaryFile == NULL || primaryIndexArchive == NULL)
     {
         printf("Falha no processamento do arquivo."); // Error handling
-        return;
+        return FUNCTION_FAILURE;
     }
     
 
@@ -113,6 +114,7 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
         scanf("%d", &numberOfFiltersApplied);
 
         Field fieldsToBeSearched[numberOfFiltersApplied];
+        Registry temporaryRegister;
 
         for (int numberOfFilters = 0; numberOfFilters < numberOfFiltersApplied; numberOfFilters++)
         {
@@ -121,162 +123,53 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
             ScanQuoteString(fieldsToBeSearched[numberOfFilters].valueOfTheField);
         }
 
-
-
-
-        Registry temporaryRegister;
-        int searchSucess = SEARCH_SUCESS;
-
-        while(binaryToRegistry(&temporaryRegister, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS)
+        int indexCodEstacao = -1;
+        for(int f = 0; f < numberOfFiltersApplied; f++)
         {
-
-
-            for (int searchForEachFilter = 0; searchForEachFilter < numberOfFiltersApplied; searchForEachFilter++)
+            if(strcmp(fieldsToBeSearched[f].nameOfTheField, "codEstacao") == 0)
             {
+                indexCodEstacao = f;
+            }
+        }
 
-                if(strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codEstacao") == 0)
-                {
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                    
-                    fopen(primaryIndexArchive, "rb");
-                    fseek(primaryIndexArchive, 0, SEEK_END);
+        if(indexCodEstacao != -1)
+        {
+            int value = atoi(fieldsToBeSearched[indexCodEstacao].valueOfTheField);
+                 
+            fseek(primaryIndexArchive, 0, SEEK_END);
 
-                    long indexByteSize = (ftell(primaryIndexArchive) - 1) / 8;
-                    Index *indexArray = (Index *) malloc((sizeof(Index)) * indexByteSize);
+            long indexByteSize = (ftell(primaryIndexArchive) - 1) / sizeof(Index);
 
-                    fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
+            Index *indexArray = (Index *) malloc((sizeof(Index)) * indexByteSize);
 
-                    int foundRRN = binarySearchOnIndex(indexArray, indexByteSize, value);
+            fseek(primaryIndexArchive, 1, SEEK_SET);
+            fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
 
-                    int byteOffset = HEADER_SIZE + (foundRRN * 80);
-                    fseek(registryBinaryFile, byteOffset, SEEK_SET);
+            int foundRRN = binarySearchOnIndex(indexArray, indexByteSize, value);
 
-                    free(indexArray);
+            free(indexArray);
 
+            if (foundRRN != -1)
+            {
+                int byteOffset = HEADER_SIZE + (foundRRN * 80);
+                fseek(registryBinaryFile, byteOffset, SEEK_SET);
 
-                }
-                //andar de registro em registro,e  comparar todos esses campos
+                sequentialSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, &fieldsToBeSearched, &registersThatFulfillTheSearch);
+            }
+        }
 
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "proximo") == 0)
-                { // if true, it means this is the filter we want! now we compare its values with each register value
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                    if(temporaryRegister.proximo != value)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
+        else{
 
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codLinha") == 0)
-                {
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                    if(temporaryRegister.codLinha != value)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
+        fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
 
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codProxEstacao") == 0)
-                {
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                    if(temporaryRegister.codProxEstacao != value)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
-
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "distProxEstacao") == 0)
-                {
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                    if(temporaryRegister.distProxEstacao != value)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
-
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codLinhaIntegra") == 0)
-                {
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                    if(temporaryRegister.codLinhaIntegra != value)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
-
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "codEstIntegra") == 0)
-                {
-                    int value = (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") == 0) ? -1 : atoi(fieldsToBeSearched[searchForEachFilter].valueOfTheField);
-                
-                    if(temporaryRegister.codEstIntegra != value)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
-
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "nomeEstacao") == 0)
-                {
-                    if (temporaryRegister.tamNomeEstacao == 0)
-                    {
-                    if (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") != 0)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                    }
-                    else
-                    {
-                    if (strcmp(temporaryRegister.nomeEstacao, fieldsToBeSearched[searchForEachFilter].valueOfTheField) != 0)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                    }
-                }
-
-                else if (strcmp(fieldsToBeSearched[searchForEachFilter].nameOfTheField, "nomeLinha") == 0)
-                {
-                    if (temporaryRegister.tamNomeLinha == 0)
-                    {
-                    if (strcmp(fieldsToBeSearched[searchForEachFilter].valueOfTheField, "") != 0)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                    }
-
-                else
-                {
-                    if (strcmp(temporaryRegister.nomeLinha, fieldsToBeSearched[searchForEachFilter].valueOfTheField) != 0)
-                    {
-                        searchSucess = SEARCH_FAILURE;
-                        break;
-                    }
-                }
-
-                }
-
-                if(searchSucess == SEARCH_SUCESS)
-                {
-                    printRegistry(&temporaryRegister);
-                    registersThatFulfillTheSearch++;
-                }
-
+        sequentialSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, &fieldsToBeSearched, &registersThatFulfillTheSearch);
 
         }
 
-        return registersThatFulfillTheSearch;
-
-        /* After gathering the fields we must filter, we start this specific search*/
+        freeRegistry(&temporaryRegister);
     }
 
-    /*if codEstacao, search using the INDEX*/
-    /*if not, search using the registryBinaryFile*/
-}
+    return registersThatFulfillTheSearch;
 }
 
 void removeIndexArchive ( FILE *registryBinaryFile, FILE *primaryIndexArchive, int numberOfSearches )

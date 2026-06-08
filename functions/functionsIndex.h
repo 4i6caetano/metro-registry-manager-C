@@ -1,9 +1,6 @@
 #ifndef FUNCTIONSINDEX_H
 #define FUNCTIONSINDEX_H
 
-#define SEARCH_SUCESS 1
-#define SEARCH_FAILURE 0
-
 #include <stdio.h>
 
 void createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIndexArchive );
