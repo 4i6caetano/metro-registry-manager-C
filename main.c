@@ -11,13 +11,6 @@
 
 typedef enum function
 {
-<<<<<<< Updated upstream
-  _,             /**<void field, value of '0' */
-  CSV_TO_BINARY, /**<calls the csvToBinary() function. '1'. */
-  SHOW_DATA,     /**<calls the showData() function. '2'. */
-  SEARCH_DATA,   /**<calls the searchData() function. '3'. */
-  SEARCH_BY_RRN, /**<calls the searchByRRN() function. '4'. */
-=======
   _,                        /**< campo vazio, valor '0' */
   CSV_TO_BINARY,            /**< chama csvToBinary(). '1'. */
   DISPLAY_VALID_RECORDS,    /**< chama displayValidRecords(). '2'. */
@@ -28,7 +21,6 @@ typedef enum function
   REMOVE_WITH_INDEX,        /**< chama removeIndexArchive(). '7'. */
   INSERT_WITH_INDEX,        /**< chama insertNewIndexArchive(). '8'. */
   UPDATE_WITH_INDEX,        /**< chama updateIndexArchive(). '9'. */
->>>>>>> Stashed changes
 } Function;
 
 int main()
@@ -83,7 +75,7 @@ int main()
       break;
     }
 
-    case SHOW_DATA:
+    case DISPLAY_VALID_RECORDS:
     case SEARCH_DATA:
     case SEARCH_BY_RRN: //Grouped together for the reason of same inputs.
     {
@@ -108,9 +100,9 @@ int main()
         break;
       }
 
-      if (whichFunction == SHOW_DATA) // If the function chosen is showData(), runs it.
+      if (whichFunction == DISPLAY_VALID_RECORDS)
       {
-        showData(binaryFile);
+        displayValidRecords(binaryFile);
       }
 
       else if (whichFunction == SEARCH_DATA) // If the function is searchData(), take the n researches and runs it.

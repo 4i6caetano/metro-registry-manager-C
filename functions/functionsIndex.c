@@ -1,16 +1,12 @@
-/*
- * functionsIndex.c
- * Implementa as funcionalidades [5] a [9] do TP1:
- *   [5] Criar arquivo de índice primário
- *   [6] Busca com suporte de índice primário
- *   [7] Remoção lógica com pilha + atualização do índice
- *   [8] Inserção com reaproveitamento de espaço + atualização do índice
- *   [9] Atualização in-place + atualização do índice
- *
- * Todas as verificações de consistência (status dos arquivos) são feitas
- * em main.c antes de chamar estas funções, seguindo o mesmo padrão das
- * funcionalidades [2], [3] e [4].
- */
+//functionsIndex.c
+//implementa as funcionalidades 5 a 9 do tp1
+//5 criar arquivo de indice primario a partir do binario de dados
+//6 busca usando o indice quando possivel ou varredura sequencial
+//7 remocao logica com pilha de reaproveitamento e atualizacao do indice
+//8 insercao reutilizando espaco removido ou acrescentando ao final
+//9 atualizacao inplace dos campos e correcao do indice se necessario
+//obs: a verificacao de consistencia dos dois arquivos e feita em main.c
+//antes de cada chamada, seguindo o mesmo padrao das funcionalidades 2 3 e 4
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,21 +20,54 @@
 #include "registry.h"
 #include "utils.h"
 
-/* ================================================================
-   ESTRUTURA AUXILIAR
-   Par (nome do campo, valor) usado nas buscas e atualizações.
-   ================================================================ */
+//par nome e valor de um campo usado para representar criterios de busca e atualizacao
 typedef struct campo {
-    char nome[100];  /**< nome do campo (ex: "codEstacao", "nomeLinha") */
-    char valor[100]; /**< valor do campo como string (NULO vira "") */
+    char nome[100];  //nome do campo ex: codEstacao nomeLinha
+    char valor[100]; //valor como string; campo nulo chega como string vazia ""
 } Campo;
 
-/* ================================================================
-   FUNÇÕES AUXILIARES INTERNAS
-   Marcadas como static — visíveis apenas dentro deste arquivo.
-   ================================================================ */
+// =========================================================
+// funcoes auxiliares internas (static = visiveis so aqui)
+// =========================================================
 
-/* Comparador para o qsort: ordena entradas do índice por codEstacao crescente */
+//percorre todos os registros validos e conta:
+//  nEst   -> quantos nomes de estacao distintos existem
+//  nPares -> quantos pares (codEstacao, codProxEstacao) distintos existem
+//isso e usado para calcular o quanto nroEstacoes e nroParesEstacao mudam
+//apos uma insercao, remocao ou atualizacao (calculo via delta antes/depois)
+static void contarUnicosValidos(FILE *arq, int *nEst, int *nPares)
+{
+    char **uniqueStations = malloc(5000 * sizeof(char *));
+    int numUniqueStations = 0;
+    Pair *uniquePairs = malloc(5000 * sizeof(Pair));
+    int numUniquePairs = 0;
+
+    //posiciona logo apos o cabecalho e le registro por registro
+    fseek(arq, HEADER_SIZE, SEEK_SET);
+    Registry reg;
+    while (binaryToRegistry(&reg, arq) == BINARY_TO_REGISTRY_SUCESS) {
+        if (reg.removido == IS_NOT_REMOVED) {
+            //adiciona o nome da estacao na lista de unicos se ainda nao estiver
+            if (reg.tamNomeEstacao > 0)
+                addUniqueStation(uniqueStations, &numUniqueStations, reg.nomeEstacao);
+            //adiciona o par (cod, proxCod) na lista de pares unicos
+            addUniquePair(uniquePairs, &numUniquePairs, reg.codEstacao, reg.codProxEstacao);
+        }
+        freeRegistry(&reg);
+    }
+
+    *nEst   = numUniqueStations;
+    *nPares = numUniquePairs;
+
+    //libera a memoria alocada para as listas de unicos
+    for (int i = 0; i < numUniqueStations; i++)
+        free(uniqueStations[i]);
+    free(uniqueStations);
+    free(uniquePairs);
+}
+
+//funcao de comparacao usada pelo qsort para ordenar entradas do indice
+//subtrai os codEstacao: negativo = a vem antes, zero = iguais, positivo = b vem antes
 static int comparaEntradaIndice(const void *a, const void *b)
 {
     const Index *ia = (const Index *)a;
@@ -46,7 +75,7 @@ static int comparaEntradaIndice(const void *a, const void *b)
     return ia->codEstacao - ib->codEstacao;
 }
 
-/* Lê o cabeçalho completo do arquivo de dados para dentro de uma struct Header */
+//le todos os 5 campos do cabecalho do arquivo de dados para a struct Header
 static void lerCabecalho(FILE *arq, Header *cab)
 {
     fseek(arq, 0, SEEK_SET);
@@ -57,7 +86,7 @@ static void lerCabecalho(FILE *arq, Header *cab)
     fread(&cab->nroParesEstacao, sizeof(int),  1, arq);
 }
 
-/* Escreve o cabeçalho completo de volta no arquivo de dados */
+//escreve os 5 campos da struct Header de volta no inicio do arquivo de dados
 static void escreverCabecalho(FILE *arq, Header *cab)
 {
     fseek(arq, 0, SEEK_SET);
@@ -68,8 +97,8 @@ static void escreverCabecalho(FILE *arq, Header *cab)
     fwrite(&cab->nroParesEstacao, sizeof(int),  1, arq);
 }
 
-/* Conta quantas entradas de dados existem no arquivo de índice.
-   Desconta o byte do cabeçalho e divide pelo tamanho fixo de cada entrada. */
+//calcula quantas entradas de dados ha no arquivo de indice
+//tamanho total menos 1 byte de cabecalho dividido por 8 bytes por entrada
 static int contarEntradasIndice(FILE *arqIndice)
 {
     fseek(arqIndice, 0, SEEK_END);
@@ -77,11 +106,9 @@ static int contarEntradasIndice(FILE *arqIndice)
     return (int)((tamanho - sizeof(char)) / INDEX_SIZE);
 }
 
-/*
- * Busca binária no arquivo de índice pelo codEstacao.
- * O índice está sempre ordenado por codEstacao crescente.
- * Retorna o RRN correspondente se encontrar, ou -1 se não encontrar.
- */
+//busca binaria no arquivo de indice pelo codEstacao
+//o indice esta sempre ordenado crescentemente entao e possivel descartar metade a cada passo
+//retorna o RRN do registro de dados correspondente ou -1 se nao encontrar
 static int buscaBinariaIndice(FILE *arqIndice, int codEstacao)
 {
     int total = contarEntradasIndice(arqIndice);
@@ -90,7 +117,7 @@ static int buscaBinariaIndice(FILE *arqIndice, int codEstacao)
     while (esq <= dir) {
         int meio = (esq + dir) / 2;
 
-        /* pula o byte do cabeçalho e salta direto à entrada do meio */
+        //salta direto ate a entrada do meio: 1 byte de cabecalho + (meio * 8 bytes)
         fseek(arqIndice, sizeof(char) + (long)meio * INDEX_SIZE, SEEK_SET);
 
         Index entrada;
@@ -98,21 +125,19 @@ static int buscaBinariaIndice(FILE *arqIndice, int codEstacao)
         fread(&entrada.RRN,        sizeof(int), 1, arqIndice);
 
         if (entrada.codEstacao == codEstacao)
-            return entrada.RRN;
+            return entrada.RRN;          //achou: devolve o RRN
         else if (entrada.codEstacao < codEstacao)
-            esq = meio + 1;
+            esq = meio + 1;              //procura na metade direita
         else
-            dir = meio - 1;
+            dir = meio - 1;              //procura na metade esquerda
     }
 
-    return -1; /* não encontrou */
+    return -1; //nao encontrou
 }
 
-/*
- * Remove a entrada com o codEstacao informado do arquivo de índice.
- * Lê todas as entradas para a memória, reescreve pulando a removida,
- * e trunca o arquivo no novo tamanho correto para não deixar lixo no final.
- */
+//remove do arquivo de indice a entrada com o codEstacao informado
+//estrategia: carrega tudo na memoria, reescreve pulando a entrada removida,
+//depois trunca o arquivo para o novo tamanho (sem isso sobra lixo no final)
 static void removerDoIndice(FILE *arqIndice, int codEstacao)
 {
     int total = contarEntradasIndice(arqIndice);
@@ -120,14 +145,14 @@ static void removerDoIndice(FILE *arqIndice, int codEstacao)
 
     Index *entradas = malloc(total * sizeof(Index));
 
-    /* carrega todas as entradas do índice na memória */
+    //carrega todas as entradas do indice para a memoria
     fseek(arqIndice, sizeof(char), SEEK_SET);
     for (int i = 0; i < total; i++) {
         fread(&entradas[i].codEstacao, sizeof(int), 1, arqIndice);
         fread(&entradas[i].RRN,        sizeof(int), 1, arqIndice);
     }
 
-    /* reescreve o índice pulando a entrada a ser removida */
+    //reescreve a partir do byte 1 pulando a entrada cujo codEstacao bate
     fseek(arqIndice, sizeof(char), SEEK_SET);
     int novoTotal = 0;
     for (int i = 0; i < total; i++) {
@@ -138,31 +163,32 @@ static void removerDoIndice(FILE *arqIndice, int codEstacao)
         }
     }
 
-    /* trunca o arquivo para eliminar o registro duplicado que sobrou no final */
+    //fflush descarrega o buffer do stdio antes do truncamento de nivel de sistema operacional
+    //ftruncate encurta o arquivo para o tamanho exato, eliminando o registro sobrando no final
     fflush(arqIndice);
     ftruncate(fileno(arqIndice), sizeof(char) + (long)novoTotal * INDEX_SIZE);
 
     free(entradas);
 }
 
-/*
- * Insere uma nova entrada no arquivo de índice mantendo a ordem crescente por codEstacao.
- * Lê tudo para a memória, encontra a posição de inserção, abre espaço deslocando as
- * entradas maiores para a direita, e reescreve o arquivo completo.
- */
+//insere uma nova entrada no arquivo de indice mantendo a ordem crescente por codEstacao
+//estrategia: carrega tudo na memoria, acha onde inserir, empurra os maiores uma posicao
+//para a direita abrindo espaco, depois reescreve o arquivo inteiro com a nova entrada
 static void inserirNoIndice(FILE *arqIndice, int codEstacao, int rrn)
 {
     int total = contarEntradasIndice(arqIndice);
+    //aloca espaco para total + 1 porque vai acrescentar uma entrada nova
     Index *entradas = malloc((total + 1) * sizeof(Index));
 
-    /* carrega as entradas existentes */
+    //carrega as entradas existentes
     fseek(arqIndice, sizeof(char), SEEK_SET);
     for (int i = 0; i < total; i++) {
         fread(&entradas[i].codEstacao, sizeof(int), 1, arqIndice);
         fread(&entradas[i].RRN,        sizeof(int), 1, arqIndice);
     }
 
-    /* encontra onde inserir para manter a ordem crescente */
+    //encontra a primeira posicao cujo codEstacao e maior que o novo
+    //se nao encontrar a insercao vai para o final (posInsercao = total)
     int posInsercao = total;
     for (int i = 0; i < total; i++) {
         if (entradas[i].codEstacao > codEstacao) {
@@ -171,15 +197,15 @@ static void inserirNoIndice(FILE *arqIndice, int codEstacao, int rrn)
         }
     }
 
-    /* abre espaço deslocando as entradas maiores uma posição para a direita */
+    //desloca as entradas maiores uma posicao para a direita abrindo o slot
     for (int i = total; i > posInsercao; i--)
         entradas[i] = entradas[i - 1];
 
-    /* preenche a nova entrada na posição correta */
+    //preenche o slot aberto com a nova entrada
     entradas[posInsercao].codEstacao = codEstacao;
     entradas[posInsercao].RRN        = rrn;
 
-    /* reescreve o arquivo de índice inteiro com a nova entrada incluída */
+    //reescreve o arquivo de indice completo com a nova entrada ja incluida
     fseek(arqIndice, sizeof(char), SEEK_SET);
     for (int i = 0; i <= total; i++) {
         fwrite(&entradas[i].codEstacao, sizeof(int), 1, arqIndice);
@@ -189,11 +215,9 @@ static void inserirNoIndice(FILE *arqIndice, int codEstacao, int rrn)
     free(entradas);
 }
 
-/*
- * Verifica se um registro satisfaz todos os critérios de busca informados.
- * Campos inteiros com valor "" (vindo de NULO) são comparados como -1.
- * Retorna 1 se satisfaz todos os critérios, 0 se falhar em qualquer um.
- */
+//testa se um registro satisfaz todos os m criterios de busca passados
+//campo inteiro com valor vazio "" e tratado como -1 (valor nulo no binario)
+//retorna 1 se o registro bate com todos os criterios, 0 se falhar em qualquer um
 static int registroCorresponde(Registry *reg, Campo *campos, int m)
 {
     for (int k = 0; k < m; k++) {
@@ -239,27 +263,24 @@ static int registroCorresponde(Registry *reg, Campo *campos, int m)
     return 1;
 }
 
-/*
- * Verifica se o campo "codEstacao" está entre os critérios de busca.
- * Se estiver, retorna o valor inteiro buscado (NULO vira -1).
- * Se não estiver, retorna -2 como sentinela de "não há codEstacao na busca".
- */
+//verifica se codEstacao esta entre os m criterios de busca
+//retorna o valor inteiro buscado (ou -1 se o valor era nulo "")
+//retorna -2 como sentinela especial quando codEstacao nao e criterio de busca
+//  -2 significa: nao ha como usar o indice, faca varredura sequencial
 static int obterCodEstacaoBusca(Campo *campos, int m)
 {
     for (int k = 0; k < m; k++) {
         if (strcmp(campos[k].nome, "codEstacao") == 0)
             return (strcmp(campos[k].valor, "") == 0) ? -1 : atoi(campos[k].valor);
     }
-    return -2;
+    return -2; //codEstacao nao esta nos criterios de busca
 }
 
-/*
- * Lê os 8 campos de um novo registro direto do stdin na ordem especificada:
- * codEstacao, nomeEstacao, codLinha, nomeLinha, codProxEstacao,
- * distProxEstacao, codLinhaIntegra, codEstIntegra.
- * Usa ScanQuoteString para tratar strings entre aspas e valores NULO.
- * Campos inteiros NULO viram -1; campos string NULO ficam como NULL.
- */
+//le do stdin os 8 campos de um novo registro na ordem do binario:
+//codEstacao nomeEstacao codLinha nomeLinha codProxEstacao
+//distProxEstacao codLinhaIntegra codEstIntegra
+//ScanQuoteString trata aspas e converte "NULO" para string vazia ""
+//campos inteiros vazios viram -1; campos string vazios ficam como NULL
 static void lerRegistroStdin(Registry *reg)
 {
     char buf[500];
@@ -273,7 +294,7 @@ static void lerRegistroStdin(Registry *reg)
         reg->nomeEstacao    = NULL;
     } else {
         reg->tamNomeEstacao = strlen(buf);
-        reg->nomeEstacao    = strdup(buf);
+        reg->nomeEstacao    = strdup(buf); //aloca copia da string
     }
 
     ScanQuoteString(buf);
@@ -300,15 +321,14 @@ static void lerRegistroStdin(Registry *reg)
     ScanQuoteString(buf);
     reg->codEstIntegra = (strcmp(buf, "") == 0) ? -1 : atoi(buf);
 
+    //registro novo nunca esta removido e ainda nao tem proximo na pilha
     reg->removido = IS_NOT_REMOVED;
     reg->proximo  = -1;
 }
 
-/*
- * Aplica os pares (campo, novo valor) sobre o registro em memória.
- * Para campos string, libera o valor antigo antes de atribuir o novo.
- * NULO vira -1 para inteiros e NULL para strings.
- */
+//aplica os p pares (campo, novo valor) sobre o registro que esta em memoria
+//para campos string: libera a string antiga antes de alocar a nova
+//valor vazio "" vira -1 para inteiros e NULL para strings (campo nulo)
 static void aplicarAtualizacoes(Registry *reg, Campo *camposAtu, int p)
 {
     for (int k = 0; k < p; k++) {
@@ -331,7 +351,7 @@ static void aplicarAtualizacoes(Registry *reg, Campo *camposAtu, int p)
             reg->codEstIntegra = (strcmp(camposAtu[k].valor, "") == 0) ? -1 : atoi(camposAtu[k].valor);
         }
         else if (strcmp(camposAtu[k].nome, "nomeEstacao") == 0) {
-            if (reg->tamNomeEstacao > 0) free(reg->nomeEstacao);
+            if (reg->tamNomeEstacao > 0) free(reg->nomeEstacao); //libera a string antiga
             if (strcmp(camposAtu[k].valor, "") == 0) {
                 reg->tamNomeEstacao = 0;
                 reg->nomeEstacao    = NULL;
@@ -341,7 +361,7 @@ static void aplicarAtualizacoes(Registry *reg, Campo *camposAtu, int p)
             }
         }
         else if (strcmp(camposAtu[k].nome, "nomeLinha") == 0) {
-            if (reg->tamNomeLinha > 0) free(reg->nomeLinha);
+            if (reg->tamNomeLinha > 0) free(reg->nomeLinha); //libera a string antiga
             if (strcmp(camposAtu[k].valor, "") == 0) {
                 reg->tamNomeLinha = 0;
                 reg->nomeLinha    = NULL;
@@ -353,35 +373,36 @@ static void aplicarAtualizacoes(Registry *reg, Campo *camposAtu, int p)
     }
 }
 
-/* ================================================================
-   [5] CRIAR ARQUIVO DE ÍNDICE PRIMÁRIO
-   Percorre o arquivo de dados, coleta todos os pares (codEstacao, RRN)
-   de registros não removidos, ordena por codEstacao e escreve no índice.
-   O status dos arquivos já foi verificado em main.c antes desta chamada.
-   ================================================================ */
+// =========================================================
+// funcionalidade 5: criar arquivo de indice primario
+// =========================================================
+//le o arquivo de dados inteiro e coleta os pares (codEstacao, RRN) de
+//todos os registros nao removidos, ordena crescentemente por codEstacao
+//e grava no arquivo de indice
+//estrutura do indice: 1 byte status + N entradas de 8 bytes cada (4 codEstacao + 4 RRN)
 int createPrimaryIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive)
 {
     if (registryBinaryFile == NULL || primaryIndexArchive == NULL)
         return FUNCTION_FAILURE;
 
-    /* marca o arquivo de índice como inconsistente durante a construção */
+    //marca o indice como inconsistente ('0') enquanto estamos construindo ele
+    //se o programa cair aqui o arquivo fica marcado como invalido
     fseek(primaryIndexArchive, 0, SEEK_SET);
     char statusIndice = INDEX_INCONSISTENT;
     fwrite(&statusIndice, sizeof(char), 1, primaryIndexArchive);
 
-    /* aloca espaço para guardar os pares (codEstacao, RRN) temporariamente */
+    //aloca vetor temporario para guardar os pares antes de ordenar
     int capacidade = 10000;
     Index *entradas = malloc(capacidade * sizeof(Index));
     int total = 0;
 
-    /* começa a leitura logo após o cabeçalho do arquivo de dados */
+    //posiciona apos o cabecalho de 17 bytes e percorre os registros um a um
     fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
     Registry reg;
-    int rrn = 0;
+    int rrn = 0; //RRN = posicao sequencial do registro no arquivo (0, 1, 2...)
 
-    /* percorre todos os registros do arquivo de dados */
     while (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
-        /* só inclui no índice registros que não foram removidos logicamente */
+        //registros removidos logicamente nao entram no indice
         if (reg.removido == IS_NOT_REMOVED) {
             entradas[total].codEstacao = reg.codEstacao;
             entradas[total].RRN        = rrn;
@@ -391,16 +412,16 @@ int createPrimaryIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchiv
         rrn++;
     }
 
-    /* ordena as entradas coletadas por codEstacao em ordem crescente */
+    //ordena os pares coletados por codEstacao crescente usando qsort
     qsort(entradas, total, sizeof(Index), comparaEntradaIndice);
 
-    /* escreve as entradas ordenadas no arquivo de índice campo a campo */
+    //grava as entradas ja ordenadas no arquivo de indice campo por campo
     for (int i = 0; i < total; i++) {
         fwrite(&entradas[i].codEstacao, sizeof(int), 1, primaryIndexArchive);
         fwrite(&entradas[i].RRN,        sizeof(int), 1, primaryIndexArchive);
     }
 
-    /* terminou sem erros — marca o arquivo de índice como consistente */
+    //tudo gravado com sucesso: marca o indice como consistente ('1')
     fseek(primaryIndexArchive, 0, SEEK_SET);
     statusIndice = INDEX_CONSISTENT;
     fwrite(&statusIndice, sizeof(char), 1, primaryIndexArchive);
@@ -409,18 +430,21 @@ int createPrimaryIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchiv
     return FUNCTION_SUCESS;
 }
 
-/* ================================================================
-   [6] BUSCA COM SUPORTE DE ÍNDICE PRIMÁRIO
-   Se o campo 'codEstacao' estiver na busca, usa busca binária no índice
-   para ir direto ao RRN. Caso contrário, faz varredura sequencial.
-   O status dos arquivos já foi verificado em main.c antes desta chamada.
-   ================================================================ */
+// =========================================================
+// funcionalidade 6: busca usando o indice primario
+// =========================================================
+//para cada uma das numberOfSearches buscas independentes:
+//  se codEstacao estiver nos criterios: usa busca binaria no indice (O log n)
+//    o indice devolve o RRN e vamos direto ao slot no arquivo de dados
+//  caso contrario: varredura sequencial em todo o arquivo de dados
+//imprime cada registro encontrado ou "Registro inexistente." se nao achar nenhum
 int restoreIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int numberOfSearches)
 {
     if (registryBinaryFile == NULL || primaryIndexArchive == NULL)
         return FUNCTION_FAILURE;
 
     for (int i = 0; i < numberOfSearches; i++) {
+        //le quantos pares campo/valor compoe esta busca especifica
         int m;
         scanf("%d", &m);
 
@@ -432,17 +456,19 @@ int restoreIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int
 
         int achouPeloMenosUm = 0;
 
-        /* verifica se o critério de busca inclui o campo codEstacao */
+        //obterCodEstacaoBusca retorna -2 se codEstacao nao esta nos criterios
         int codBuscado = obterCodEstacaoBusca(campos, m);
 
         if (codBuscado != -2) {
-            /* BUSCA INDEXADA: usa o índice para encontrar o RRN diretamente */
+            //busca indexada: busca binaria no indice retorna o RRN diretamente
             int rrn = buscaBinariaIndice(primaryIndexArchive, codBuscado);
             if (rrn >= 0) {
+                //calcula o offset: cabecalho + rrn * 80 bytes por registro
                 fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                 Registry reg;
                 if (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
-                    /* confirma que o registro não foi removido e satisfaz os outros filtros */
+                    //mesmo com o indice confirma que o registro nao foi removido
+                    //e que satisfaz os outros filtros alem do codEstacao
                     if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, campos, m)) {
                         printRegistry(&reg);
                         achouPeloMenosUm = 1;
@@ -451,7 +477,7 @@ int restoreIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int
                 }
             }
         } else {
-            /* BUSCA SEQUENCIAL: percorre todos os registros do arquivo de dados */
+            //busca sequencial: le todos os registros do inicio ao fim
             fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
             Registry reg;
             while (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
@@ -466,7 +492,7 @@ int restoreIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int
         if (!achouPeloMenosUm)
             printf("Registro inexistente.\n");
 
-        /* separa as saídas de buscas consecutivas com uma linha em branco */
+        //linha em branco separando a saida de buscas consecutivas (exceto apos a ultima)
         if (i < numberOfSearches - 1)
             printf("\n");
     }
@@ -474,20 +500,22 @@ int restoreIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int
     return FUNCTION_SUCESS;
 }
 
-/* ================================================================
-   [7] REMOÇÃO LÓGICA COM PILHA + ATUALIZAÇÃO DO ÍNDICE
-   Encontra os registros que satisfazem o critério (indexada ou sequencial),
-   marca como removidos usando a pilha (topo/proximo no cabeçalho),
-   e remove as entradas correspondentes do arquivo de índice.
-   O status dos arquivos já foi verificado em main.c antes desta chamada.
-   ================================================================ */
+// =========================================================
+// funcionalidade 7: remocao logica com pilha e indice
+// =========================================================
+//para cada uma das numberOfSearches operacoes de remocao:
+//  encontra os registros que batem com o criterio (indexada ou sequencial)
+//  aplica remocao logica: marca removido='1' e empilha na pilha de reaproveitamento
+//    a pilha e implementada no campo "proximo" do registro e "topo" do cabecalho
+//  remove a entrada correspondente do arquivo de indice
+//ao final atualiza o cabecalho (topo, nroEstacoes, nroParesEstacao) e marca consistente
 int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int numberOfSearches)
 {
     if (registryBinaryFile == NULL || primaryIndexArchive == NULL)
         return FUNCTION_FAILURE;
 
-    /* marca ambos os arquivos como inconsistentes enquanto fazemos alterações —
-       protege contra queda de energia ou interrupção durante a operação */
+    //marca ambos os arquivos como inconsistentes antes de comecar a alterar
+    //se o programa cair no meio da operacao os arquivos ficam sinalizados como invalidos
     char inconsistente = STATUS_INCONSISTENT;
     fseek(registryBinaryFile, 0, SEEK_SET);
     fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
@@ -496,9 +524,13 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
     fseek(primaryIndexArchive, 0, SEEK_SET);
     fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
 
-    /* lê o cabeçalho do arquivo de dados para ter acesso ao topo da pilha */
+    //le o cabecalho para acessar o topo atual da pilha de registros removidos
     Header cab;
     lerCabecalho(registryBinaryFile, &cab);
+
+    //snapshot dos contadores antes das remocoes para calcular o delta ao final
+    int estAntes, paresAntes;
+    contarUnicosValidos(registryBinaryFile, &estAntes, &paresAntes);
 
     for (int i = 0; i < numberOfSearches; i++) {
         int m;
@@ -513,7 +545,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
         int codBuscado = obterCodEstacaoBusca(campos, m);
 
         if (codBuscado != -2) {
-            /* BUSCA INDEXADA */
+            //busca indexada: vai direto ao RRN pelo indice
             int rrn = buscaBinariaIndice(primaryIndexArchive, codBuscado);
             if (rrn >= 0) {
                 fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
@@ -521,16 +553,17 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                 if (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
                     if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, campos, m)) {
                         int cod = reg.codEstacao;
-                        freeRegistry(&reg);
+                        freeRegistry(&reg); //libera antes de reposicionar o cursor
 
-                        /* sobrescreve APENAS o campo removido e o campo proximo no início do
-                           registro. Os demais bytes permanecem inalterados, conforme a especificação.
-                           proximo aponta para o antigo topo — empilha este registro na pilha. */
+                        //sobrescreve apenas os primeiros 5 bytes do registro:
+                        //  byte 0: removido = '1' (marca como deletado)
+                        //  bytes 1-4: proximo = topo atual (encadeia na pilha)
+                        //os demais 75 bytes permanecem inalterados (dados ficam la)
                         fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                         char marcaRemovido = IS_REMOVED;
                         fwrite(&marcaRemovido, sizeof(char), 1, registryBinaryFile);
                         fwrite(&cab.topo,      sizeof(int),  1, registryBinaryFile);
-                        cab.topo = rrn; /* este RRN passa a ser o novo topo da pilha */
+                        cab.topo = rrn; //esse RRN e o novo topo da pilha
 
                         removerDoIndice(primaryIndexArchive, cod);
                     } else {
@@ -539,11 +572,11 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                 }
             }
         } else {
-            /* BUSCA SEQUENCIAL: posiciona uma vez no início e avança registro a registro.
-               fseek só é feito quando escrevemos no arquivo e movemos o cursor. */
+            //busca sequencial: posiciona no inicio e avanca registro a registro
+            //fseek adicional so ocorre quando encontramos e removemos um registro
             fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
             int rrn = 0;
-            while (rrn < cab.proxRRN) {
+            while (rrn < cab.proxRRN) { //proxRRN e o total de slots usados (incluindo removidos)
                 Registry reg;
                 if (binaryToRegistry(&reg, registryBinaryFile) != BINARY_TO_REGISTRY_SUCESS)
                     break;
@@ -552,33 +585,40 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                     int cod = reg.codEstacao;
                     freeRegistry(&reg);
 
-                    /* volta ao início deste registro para sobrescrever removido e proximo.
-                       Os demais bytes permanecem inalterados, conforme a especificação. */
+                    //volta ao inicio deste registro para sobrescrever removido e proximo
                     fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                     char marcaRemovido = IS_REMOVED;
                     fwrite(&marcaRemovido, sizeof(char), 1, registryBinaryFile);
                     fwrite(&cab.topo,      sizeof(int),  1, registryBinaryFile);
                     cab.topo = rrn;
 
-                    /* após escrever 5 bytes, o cursor está no meio do registro —
-                       avança os bytes restantes para chegar ao próximo registro */
+                    //escrevemos 5 bytes (1 char + 1 int); avanca os 75 restantes
+                    //para deixar o cursor no inicio do proximo registro
                     fseek(registryBinaryFile, REGISTRY_SIZE - sizeof(char) - sizeof(int), SEEK_CUR);
 
                     removerDoIndice(primaryIndexArchive, cod);
                 } else {
                     freeRegistry(&reg);
-                    /* binaryToRegistry já posicionou o cursor no próximo registro */
+                    //binaryToRegistry ja deixou o cursor no inicio do proximo registro
                 }
                 rrn++;
             }
         }
     }
 
-    /* restaura o cabeçalho com o topo atualizado e marca o arquivo como consistente */
+    //calcula quantos unicos existem agora e aplica a diferenca nos contadores do cabecalho
+    {
+        int estDepois, paresDepois;
+        contarUnicosValidos(registryBinaryFile, &estDepois, &paresDepois);
+        cab.nroEstacoes     += estDepois   - estAntes;
+        cab.nroParesEstacao += paresDepois - paresAntes;
+    }
+
+    //grava o cabecalho atualizado e marca o arquivo de dados como consistente
     cab.status = STATUS_CONSISTENT;
     escreverCabecalho(registryBinaryFile, &cab);
 
-    /* marca o arquivo de índice como consistente */
+    //marca o arquivo de indice como consistente
     fseek(primaryIndexArchive, 0, SEEK_SET);
     char consistenteIndice = INDEX_CONSISTENT;
     fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
@@ -586,19 +626,22 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
     return FUNCTION_SUCESS;
 }
 
-/* ================================================================
-   [8] INSERÇÃO COM REAPROVEITAMENTO DE ESPAÇO (PILHA) + ÍNDICE
-   Para cada novo registro: se a pilha não estiver vazia, reutiliza o
-   espaço do topo (lê o proximo para desempilhar); senão, acrescenta ao
-   final do arquivo incrementando proxRRN. Insere no índice em ordem.
-   O status dos arquivos já foi verificado em main.c antes desta chamada.
-   ================================================================ */
+// =========================================================
+// funcionalidade 8: insercao com reaproveitamento e indice
+// =========================================================
+//para cada um dos numberOfRegistries novos registros:
+//  se a pilha de espacos livres nao estiver vazia (topo != -1):
+//    reutiliza o slot do topo, le o campo "proximo" para desempilhar
+//  caso contrario:
+//    acrescenta ao final do arquivo incrementando proxRRN
+//  grava o registro novo na posicao calculada e insere no indice
+//ao final atualiza cabecalho (topo, proxRRN, nroEstacoes, nroParesEstacao)
 int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int numberOfRegistries)
 {
     if (registryBinaryFile == NULL || primaryIndexArchive == NULL)
         return FUNCTION_FAILURE;
 
-    /* marca ambos os arquivos como inconsistentes durante as inserções */
+    //marca ambos os arquivos como inconsistentes antes de alterar
     char inconsistente = STATUS_INCONSISTENT;
     fseek(registryBinaryFile, 0, SEEK_SET);
     fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
@@ -607,49 +650,60 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
     fseek(primaryIndexArchive, 0, SEEK_SET);
     fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
 
-    /* lê o cabeçalho para saber o estado atual da pilha e do proxRRN */
+    //le o cabecalho para saber o topo da pilha e o proximo RRN disponivel
     Header cab;
     lerCabecalho(registryBinaryFile, &cab);
 
+    //snapshot dos contadores antes das insercoes para calcular o delta ao final
+    int estAntes, paresAntes;
+    contarUnicosValidos(registryBinaryFile, &estAntes, &paresAntes);
+
     for (int i = 0; i < numberOfRegistries; i++) {
         Registry reg;
-        lerRegistroStdin(&reg); /* lê os 8 campos do novo registro pelo stdin */
+        lerRegistroStdin(&reg); //le os 8 campos do novo registro do stdin
 
         int rrnNovo;
 
         if (cab.topo != -1) {
-            /* a pilha tem espaço livre — reutiliza o slot do topo */
+            //ha espaco livre na pilha: reutiliza o slot apontado pelo topo
             rrnNovo = cab.topo;
 
-            /* lê o campo proximo do registro removido para desempilhar.
-               proximo fica logo após o byte removido, no offset +1 do início do registro. */
+            //le o campo "proximo" do slot removido para descobrir o proximo da pilha
+            //proximo fica nos bytes 1 a 4 do registro (logo apos o byte "removido")
             fseek(registryBinaryFile,
                   HEADER_SIZE + (long)rrnNovo * REGISTRY_SIZE + sizeof(char),
                   SEEK_SET);
-            fread(&cab.topo, sizeof(int), 1, registryBinaryFile);
-
+            fread(&cab.topo, sizeof(int), 1, registryBinaryFile); //desempilha
         } else {
-            /* pilha vazia — acrescenta ao final do arquivo de dados */
+            //pilha vazia: acrescenta ao final do arquivo e avanca proxRRN
             rrnNovo = cab.proxRRN;
             cab.proxRRN++;
         }
 
-        /* guarda o codEstacao antes de chamar registryToBinary, pois ela libera os ponteiros */
+        //salva o codEstacao antes de registryToBinary pois ela libera os ponteiros da struct
         int codEstacaoNovo = reg.codEstacao;
 
-        /* escreve o novo registro na posição calculada do arquivo de dados */
+        //escreve os 80 bytes do novo registro na posicao calculada
         fseek(registryBinaryFile, HEADER_SIZE + (long)rrnNovo * REGISTRY_SIZE, SEEK_SET);
         registryToBinary(&reg, registryBinaryFile);
 
-        /* insere no arquivo de índice mantendo a ordem crescente por codEstacao */
+        //insere o par (codEstacao, rrnNovo) no indice mantendo a ordem crescente
         inserirNoIndice(primaryIndexArchive, codEstacaoNovo, rrnNovo);
     }
 
-    /* restaura o cabeçalho com proxRRN e topo atualizados */
+    //calcula o delta de unicos e aplica nos contadores do cabecalho
+    {
+        int estDepois, paresDepois;
+        contarUnicosValidos(registryBinaryFile, &estDepois, &paresDepois);
+        cab.nroEstacoes     += estDepois   - estAntes;
+        cab.nroParesEstacao += paresDepois - paresAntes;
+    }
+
+    //grava o cabecalho com topo e proxRRN atualizados e marca como consistente
     cab.status = STATUS_CONSISTENT;
     escreverCabecalho(registryBinaryFile, &cab);
 
-    /* marca o arquivo de índice como consistente */
+    //marca o arquivo de indice como consistente
     fseek(primaryIndexArchive, 0, SEEK_SET);
     char consistenteIndice = INDEX_CONSISTENT;
     fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
@@ -657,20 +711,21 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
     return FUNCTION_SUCESS;
 }
 
-/* ================================================================
-   [9] ATUALIZAÇÃO IN-PLACE + ÍNDICE
-   Para cada operação: lê m critérios de busca e p campos a atualizar.
-   Encontra os registros que satisfazem a busca (indexada ou sequencial),
-   aplica as alterações diretamente no slot de 80 bytes (in-place),
-   e atualiza o índice se o codEstacao foi modificado.
-   O status dos arquivos já foi verificado em main.c antes desta chamada.
-   ================================================================ */
+// =========================================================
+// funcionalidade 9: atualizacao inplace com manutencao do indice
+// =========================================================
+//para cada uma das numberOfUpdates operacoes de atualizacao:
+//  le m pares (campo, valor) de busca e p pares (campo, novo valor) de atualizacao
+//  encontra os registros que batem com a busca (indexada ou sequencial)
+//  aplica as alteracoes diretamente nos 80 bytes do slot (inplace, sem mover o registro)
+//  se codEstacao mudou: remove a entrada antiga do indice e insere a nova
+//ao final atualiza os contadores do cabecalho e marca os arquivos como consistentes
 int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int numberOfUpdates)
 {
     if (registryBinaryFile == NULL || primaryIndexArchive == NULL)
         return FUNCTION_FAILURE;
 
-    /* marca ambos os arquivos como inconsistentes durante as atualizações */
+    //marca ambos os arquivos como inconsistentes antes de alterar
     char inconsistente = STATUS_INCONSISTENT;
     fseek(registryBinaryFile, 0, SEEK_SET);
     fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
@@ -679,12 +734,16 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
     fseek(primaryIndexArchive, 0, SEEK_SET);
     fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
 
-    /* lê o cabeçalho para saber quantos registros existem (proxRRN) */
+    //le o cabecalho para acessar proxRRN (total de slots ocupados no arquivo)
     Header cab;
     lerCabecalho(registryBinaryFile, &cab);
 
+    //snapshot dos contadores antes das atualizacoes para calcular o delta ao final
+    int estAntes, paresAntes;
+    contarUnicosValidos(registryBinaryFile, &estAntes, &paresAntes);
+
     for (int i = 0; i < numberOfUpdates; i++) {
-        /* m = quantidade de pares de busca (campo/valor) */
+        //le os m criterios de busca (campo + valor a comparar)
         int m;
         scanf("%d", &m);
         Campo camposBusca[m];
@@ -693,7 +752,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
             ScanQuoteString(camposBusca[j].valor);
         }
 
-        /* p = quantidade de pares de atualização (campo/novo valor) */
+        //le os p campos a atualizar (campo + novo valor)
         int p;
         scanf("%d", &p);
         Campo camposAtu[p];
@@ -705,7 +764,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
         int codBuscado = obterCodEstacaoBusca(camposBusca, m);
 
         if (codBuscado != -2) {
-            /* BUSCA INDEXADA */
+            //busca indexada: localiza o RRN pelo indice e vai direto ao slot
             int rrn = buscaBinariaIndice(primaryIndexArchive, codBuscado);
             if (rrn >= 0) {
                 fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
@@ -714,16 +773,17 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                     if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, camposBusca, m)) {
                         int codAntigo = reg.codEstacao;
 
-                        /* aplica as atualizações sobre o registro em memória */
+                        //aplica as alteracoes sobre o registro que esta em memoria
                         aplicarAtualizacoes(&reg, camposAtu, p);
 
                         int codNovo = reg.codEstacao;
 
-                        /* reescreve o registro inteiro na mesma posição (in-place) */
+                        //reescreve os 80 bytes na mesma posicao (atualizacao inplace)
                         fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                         registryToBinary(&reg, registryBinaryFile);
 
-                        /* se o codEstacao mudou, atualiza a entrada no arquivo de índice */
+                        //se o codEstacao mudou: remove a entrada antiga do indice
+                        //e insere a nova com o mesmo RRN mas o novo codigo
                         if (codNovo != codAntigo) {
                             removerDoIndice(primaryIndexArchive, codAntigo);
                             inserirNoIndice(primaryIndexArchive, codNovo, rrn);
@@ -734,8 +794,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                 }
             }
         } else {
-            /* BUSCA SEQUENCIAL: posiciona uma vez no início e avança registro a registro.
-               fseek só é feito quando escrevemos no arquivo e movemos o cursor. */
+            //busca sequencial: percorre todos os slots do arquivo um a um
             fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
             int rrn = 0;
             while (rrn < cab.proxRRN) {
@@ -750,9 +809,9 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
                     int codNovo = reg.codEstacao;
 
-                    /* volta ao início deste registro e reescreve os 80 bytes completos.
-                       registryToBinary escreve exatamente REGISTRY_SIZE bytes, então o
-                       cursor fica automaticamente no início do próximo registro. */
+                    //volta ao inicio deste slot e reescreve os 80 bytes (inplace)
+                    //registryToBinary escreve exatamente REGISTRY_SIZE bytes, entao
+                    //o cursor fica automaticamente no inicio do proximo slot
                     fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                     registryToBinary(&reg, registryBinaryFile);
 
@@ -762,18 +821,26 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                     }
                 } else {
                     freeRegistry(&reg);
-                    /* binaryToRegistry já posicionou o cursor no próximo registro */
+                    //binaryToRegistry ja posicionou o cursor no proximo slot
                 }
                 rrn++;
             }
         }
     }
 
-    /* restaura o cabeçalho do arquivo de dados como consistente */
+    //calcula o delta de unicos e aplica nos contadores do cabecalho
+    {
+        int estDepois, paresDepois;
+        contarUnicosValidos(registryBinaryFile, &estDepois, &paresDepois);
+        cab.nroEstacoes     += estDepois   - estAntes;
+        cab.nroParesEstacao += paresDepois - paresAntes;
+    }
+
+    //grava o cabecalho atualizado e marca o arquivo de dados como consistente
     cab.status = STATUS_CONSISTENT;
     escreverCabecalho(registryBinaryFile, &cab);
 
-    /* marca o arquivo de índice como consistente */
+    //marca o arquivo de indice como consistente
     fseek(primaryIndexArchive, 0, SEEK_SET);
     char consistenteIndice = INDEX_CONSISTENT;
     fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
