@@ -1,4 +1,6 @@
-#include<stdio.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "index.h"
@@ -15,11 +17,11 @@ corretamente o arquivo de dados criado na funcionalidade [1]. Isso significa que
 momento da criação, o arquivo de índice primário deve possuir um registro de cabeçalho
 e vários registros de dados*/
 
-void createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIndexArchive)
+int createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIndexArchive)
 {
     if(registryBinaryFile == NULL || primaryIndexArchive == NULL){
         printf("Falha no processamento do arquivo."); // Error handling
-        return;
+        return FUNCTION_FAILURE;
     }
 
     char indexConsistency = INDEX_INCONSISTENT;
@@ -69,6 +71,8 @@ void createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryI
 
     fseek(primaryIndexArchive, 0, SEEK_SET);
     fwrite(&indexConsistency, sizeof(char), 1, primaryIndexArchive);
+
+    return FUNCTION_SUCESS;
 }
 
 /*
@@ -104,13 +108,12 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
     * numberOfFiltersApplied will be the filters applied to each search. (this is the second loop).
     * searchForEachFilter loops through each filter and verifies it. (the second loop)
     * */
-
-    int registersThatFulfillTheSearch = 0; // Number of registers that match the search, we will return it in the end!
     int numberOfFiltersApplied = 0; // Number of filters in each search! given as INPUT by the user.
 
     for(int quantityOfSearches = 0; quantityOfSearches < numberOfSearches; quantityOfSearches++)
     {
         /* loop responsible for the NUMBER of SEARCHES.*/
+        int registersThatFulfillTheSearch = 0; // Number of registers that match the search, we will return it in the end!
 
         scanf("%d", &numberOfFiltersApplied);
 
@@ -155,7 +158,7 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
                 int byteOffset = HEADER_SIZE + (foundRRN * 80);
                 fseek(registryBinaryFile, byteOffset, SEEK_SET);
 
-                singleSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, fieldsToBeSearched, &registersThatFulfillTheSearch);
+               singleSearchInRegister(temporaryRegister, registryBinaryFile, fieldsToBeSearched, numberOfFiltersApplied, &registersThatFulfillTheSearch);
             }
         }
 
@@ -166,9 +169,19 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
         sequentialSearchInRegister(temporaryRegister, registryBinaryFile, numberOfFiltersApplied, fieldsToBeSearched, &registersThatFulfillTheSearch);
 
         }
+
+        if (registersThatFulfillTheSearch == 0)
+        {
+            printf("Registro inexistente.\n");
+        }
+
+        if(quantityOfSearches < numberOfSearches - 1)
+        {
+            printf("\n");
+        }
     }
 
-    return registersThatFulfillTheSearch;
+    return FUNCTION_SUCESS;
 }
 
 // =========================================================

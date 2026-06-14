@@ -1,9 +1,25 @@
 #ifndef UTILS_H
+#define UTILS_H
 
 #include "registry.h"
 
 #define SEARCH_SUCESS 1
 #define SEARCH_FAILURE 0
+
+    /** 
+    * @brief 
+    * nameOfTheField[100];
+    *  
+    * valueOfTheField[100]; 
+    * */
+    typedef struct field
+    {
+        char nameOfTheField[100];
+        char valueOfTheField[100];
+    } Field;
+
+    struct index;
+    typedef struct index Index;
 
 
 /**
@@ -31,19 +47,6 @@ void ScanQuoteString(char *str);
 char *getToken(char **buffer);
 
 int compareCodEstacao(const void *a, const void *b);
-
-
-    /** 
-    * @brief 
-    * nameOfTheField[100];
-    *  
-    * valueOfTheField[100]; 
-    * */
-    typedef struct field
-    {
-        char nameOfTheField[100];
-        char valueOfTheField[100];
-    } Field;
 
 int binarySearchOnIndex(Index *indexArray, int size, int targetKey);
 

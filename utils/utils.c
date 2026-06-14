@@ -260,7 +260,6 @@ void sequentialSearchInRegister(Registry temporaryRegister, FILE *registryBinary
                 printRegistry(&temporaryRegister);
                 (*registersThatFulfillTheSearch)++;
             }
-
         }
 
         freeRegistry(&temporaryRegister);
