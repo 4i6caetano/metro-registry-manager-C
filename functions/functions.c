@@ -101,7 +101,6 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
 
   for (int i = 0; i < n; i++) // This loop is responsible for each independent search the user asked for, defined by 'n'.
   {
-    int foundAtleastOne = 0; // a flag. if it finds atleast one match on the record, it is incremented.
     int m = 0; // The number of filters the user wants to aplly on this specific search.
     scanf("%d", &m);
 
@@ -114,157 +113,17 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
     }
 
     fseek(binaryFile, HEADER_SIZE, SEEK_SET); // Starting from header_size, defines the cursor after it.
-    Registry registry;
 
-    while (binaryToRegistry(&registry, binaryFile) == BINARY_TO_REGISTRY_SUCESS) //while binaryToRegistry converts the data of the FILE to our RAM is sucess, do it.
-    {
+    Registry temporaryRegistry;
 
-      if (registry.removido == IS_NOT_REMOVED) // checks if removed
-      {                  // if the registry is not removed
-        int isEqual = 1; // 1 if positive, 0 if NOT positive
-        // we search in it
+    int registersThatFulfillTheSearch = 0; // counter for each search
 
-        /* This drives the file pointer through the disk. It reads the 80-byte block, extract its variables from the FILE, allocate memory for variable-length strings,
-        populates registry and skips the garbage bytes via SEEK_CUR. Returns SUCESS until hits EOF.*/
-        for (int k = 0; k < m; k++)
-        {
+    sequentialSearchInRegister(temporaryRegistry, binaryFile, m, field, &registersThatFulfillTheSearch);
 
-          /* compares each user filter against the fields of the active registries.*/
-
-          if (strcmp(field[k].nameOfTheField, "codEstacao") == 0)
-          {
-
-            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
-
-            if (registry.codEstacao != searchValue)
-            {
-              isEqual = 0;
-              break;
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "codLinha") == 0)
-          {
-
-            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
-
-            if (registry.codLinha != searchValue)
-            {
-              isEqual = 0;
-              break;
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "codProxEstacao") == 0)
-          {
-            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
-
-            if (registry.codProxEstacao != searchValue)
-            {
-              isEqual = 0;
-              break;
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "distProxEstacao") == 0)
-          {
-            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
-
-            if (registry.distProxEstacao != searchValue)
-            {
-              isEqual = 0;
-              break;
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "codLinhaIntegra") == 0)
-          {
-            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
-
-            if (registry.codLinhaIntegra != searchValue)
-            {
-              isEqual = 0;
-              break;
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "codEstIntegra") == 0)
-          {
-            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
-            if (registry.codEstIntegra != searchValue)
-            {
-              isEqual = 0;
-              break;
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "nomeEstacao") == 0)
-          {
-            if (registry.tamNomeEstacao == 0)
-            {
-              if (strcmp(field[k].valueOfTheField, "") != 0)
-              {
-                isEqual = 0;
-                break;
-              }
-            }
-            else
-            {
-              if (strcmp(registry.nomeEstacao, field[k].valueOfTheField) != 0)
-              {
-                isEqual = 0;
-                break;
-              }
-            }
-          }
-
-          else if (strcmp(field[k].nameOfTheField, "nomeLinha") == 0)
-          {
-            if (registry.tamNomeLinha == 0)
-            {
-              if (strcmp(field[k].valueOfTheField, "") != 0)
-              {
-                isEqual = 0;
-                break;
-              }
-            }
-            else
-            {
-              if (strcmp(registry.nomeLinha, field[k].valueOfTheField) != 0)
-              {
-                isEqual = 0;
-                break;
-              }
-            }
-          }
-
-        } // closes the 'k' loop
-
-        /* If the record survived the k loop without 'break', it satisfies the criteria. The program calls printRegistry()
-        and increments our sucessful match counter. */
-
-        if (isEqual == 1) 
-        {
-          printRegistry(&registry); // Print the registry found.
-          foundAtleastOne++;
-        }
-
-      } // closes the registry verifier
-
-      freeRegistry(&registry);
-
-    } // closes the binaryToRegister function
-
-    if (foundAtleastOne == 0)
+    if (registersThatFulfillTheSearch == 0)
     {
       printf("Registro inexistente.\n");
     }
-
-    if (i < n - 1)
-    {
-      printf("\n");
-    }
-
   } // closes the 'i' loop.
 } // closes the searchData function.
 

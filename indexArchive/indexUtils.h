@@ -1,7 +1,11 @@
+#ifndef INDEXUTILS_H
+#define INDEXUTILS_H
+
 #include "stdio.h"
 
 #include "registry.h"
 #include "utils.h"
+#include "header.h"
 
 
 void contarUnicosValidos(FILE *arq, int *nEst, int *nPares);
@@ -33,3 +37,9 @@ int registroCorresponde(Registry *reg, Field *campos, int m);
 
 // 3. Lê dados brutos do terminal para inserir um registro novo (Funcionalidade 8)
 void lerRegistroStdin(Registry *reg);
+
+void lerCabecalho(FILE *arq, Header *cab);
+
+void escreverCabecalho(FILE *arq, Header *cab);
+
+#endif

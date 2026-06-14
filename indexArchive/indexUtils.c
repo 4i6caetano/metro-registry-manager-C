@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "registry.h"
 #include "index.h"
@@ -276,4 +279,24 @@ void lerRegistroStdin(Registry *reg)
 
     reg->removido = IS_NOT_REMOVED;
     reg->proximo  = -1;
+}
+
+void lerCabecalho(FILE *arq, Header *cab)
+{
+    fseek(arq, 0, SEEK_SET);
+    fread(&cab->status,          sizeof(char), 1, arq);
+    fread(&cab->topo,            sizeof(int),  1, arq);
+    fread(&cab->proxRRN,         sizeof(int),  1, arq);
+    fread(&cab->nroEstacoes,     sizeof(int),  1, arq);
+    fread(&cab->nroParesEstacao, sizeof(int),  1, arq);
+}
+
+void escreverCabecalho(FILE *arq, Header *cab)
+{
+    fseek(arq, 0, SEEK_SET);
+    fwrite(&cab->status,          sizeof(char), 1, arq);
+    fwrite(&cab->topo,            sizeof(int),  1, arq);
+    fwrite(&cab->proxRRN,         sizeof(int),  1, arq);
+    fwrite(&cab->nroEstacoes,     sizeof(int),  1, arq);
+    fwrite(&cab->nroParesEstacao, sizeof(int),  1, arq);
 }

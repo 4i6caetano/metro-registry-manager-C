@@ -150,7 +150,7 @@ int main()
       }
       fseek(binaryFile, 0, SEEK_SET);
 
-      if (createPrimaryIndexArchive(binaryFile, indexBinFile) == FUNCTION_SUCESS)
+      if (createPrimaryIndexArchiveInBinary(binaryFile, indexBinFile) == FUNCTION_SUCESS)
       {
         fclose(binaryFile);
         fclose(indexBinFile);
@@ -206,7 +206,7 @@ int main()
       }
       fseek(indexBinFile, 0, SEEK_SET);
 
-      restoreIndexArchive(binaryFile, indexBinFile, n);
+      searchOnIndexArchive(binaryFile, indexBinFile, n);
       fclose(binaryFile);
       fclose(indexBinFile);
       break;
