@@ -90,12 +90,6 @@ int displayValidRecords(FILE *binaryFile)
   return FUNCTION_SUCESS; // SUCESS
 }
 
-typedef struct field
-{
-  char name[100];
-  char value[100];
-} Field;
-
 void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of independent searches the user wants.
 {
 
@@ -115,8 +109,8 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
 
     for (int j = 0; j < m; j++)
     {
-      scanf("%s", field[j].name); // reads the target's name, like "codEstacao"
-      ScanQuoteString(field[j].value); // captures the target value.
+      scanf("%s", field[j].nameOfTheField); // reads the target's name, like "codEstacao"
+      ScanQuoteString(field[j].valueOfTheField); // captures the target value.
     }
 
     fseek(binaryFile, HEADER_SIZE, SEEK_SET); // Starting from header_size, defines the cursor after it.
@@ -137,10 +131,10 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
 
           /* compares each user filter against the fields of the active registries.*/
 
-          if (strcmp(field[k].name, "codEstacao") == 0)
+          if (strcmp(field[k].nameOfTheField, "codEstacao") == 0)
           {
 
-            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
 
             if (registry.codEstacao != searchValue)
             {
@@ -149,10 +143,10 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "codLinha") == 0)
+          else if (strcmp(field[k].nameOfTheField, "codLinha") == 0)
           {
 
-            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
 
             if (registry.codLinha != searchValue)
             {
@@ -161,9 +155,9 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "codProxEstacao") == 0)
+          else if (strcmp(field[k].nameOfTheField, "codProxEstacao") == 0)
           {
-            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
 
             if (registry.codProxEstacao != searchValue)
             {
@@ -172,9 +166,9 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "distProxEstacao") == 0)
+          else if (strcmp(field[k].nameOfTheField, "distProxEstacao") == 0)
           {
-            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
 
             if (registry.distProxEstacao != searchValue)
             {
@@ -183,9 +177,9 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "codLinhaIntegra") == 0)
+          else if (strcmp(field[k].nameOfTheField, "codLinhaIntegra") == 0)
           {
-            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
 
             if (registry.codLinhaIntegra != searchValue)
             {
@@ -194,9 +188,9 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "codEstIntegra") == 0)
+          else if (strcmp(field[k].nameOfTheField, "codEstIntegra") == 0)
           {
-            int searchValue = (strcmp(field[k].value, "") == 0) ? -1 : atoi(field[k].value);
+            int searchValue = (strcmp(field[k].valueOfTheField, "") == 0) ? -1 : atoi(field[k].valueOfTheField);
             if (registry.codEstIntegra != searchValue)
             {
               isEqual = 0;
@@ -204,11 +198,11 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "nomeEstacao") == 0)
+          else if (strcmp(field[k].nameOfTheField, "nomeEstacao") == 0)
           {
             if (registry.tamNomeEstacao == 0)
             {
-              if (strcmp(field[k].value, "") != 0)
+              if (strcmp(field[k].valueOfTheField, "") != 0)
               {
                 isEqual = 0;
                 break;
@@ -216,7 +210,7 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
             else
             {
-              if (strcmp(registry.nomeEstacao, field[k].value) != 0)
+              if (strcmp(registry.nomeEstacao, field[k].valueOfTheField) != 0)
               {
                 isEqual = 0;
                 break;
@@ -224,11 +218,11 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
           }
 
-          else if (strcmp(field[k].name, "nomeLinha") == 0)
+          else if (strcmp(field[k].nameOfTheField, "nomeLinha") == 0)
           {
             if (registry.tamNomeLinha == 0)
             {
-              if (strcmp(field[k].value, "") != 0)
+              if (strcmp(field[k].valueOfTheField, "") != 0)
               {
                 isEqual = 0;
                 break;
@@ -236,7 +230,7 @@ void searchData(FILE *binaryFile, int n) // Takes the FILE and the number of ind
             }
             else
             {
-              if (strcmp(registry.nomeLinha, field[k].value) != 0)
+              if (strcmp(registry.nomeLinha, field[k].valueOfTheField) != 0)
               {
                 isEqual = 0;
                 break;

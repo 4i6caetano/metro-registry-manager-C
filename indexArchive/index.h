@@ -19,4 +19,6 @@ typedef struct index
 
 } Index;
 
+#include "indexUtils.h"
+
 #endif

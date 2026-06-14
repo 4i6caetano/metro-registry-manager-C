@@ -91,7 +91,7 @@ int binaryToRegistry(Registry *newRegistry, FILE *binaryFile)
 
     if (fread(&newRegistry->removido, sizeof(char), 1, binaryFile) != 1)
     {
-        return BINARY_TO_REGISTRY_FAILURE; //if removed, returns failiure.
+        return BINARY_TO_REGISTRY_FAILURE; //if removed, returns failure.
     }
 
     /* reads the data from the binaryFile and saves them on the registry. */
