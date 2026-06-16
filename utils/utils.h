@@ -3,9 +3,6 @@
 
 #include "registry.h"
 
-#define SEARCH_SUCESS 1
-#define SEARCH_FAILURE 0
-
     /**
      * @brief Structure used to store search filters or update fields dynamically.
      *
