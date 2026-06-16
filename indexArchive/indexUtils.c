@@ -15,9 +15,16 @@
 //apos uma insercao, remocao ou atualizacao (calculo via delta antes/depois)
 void countValidRecords(FILE *arq, int *nEst, int *nPares)
 {
-    char **uniqueStations = malloc(5000 * sizeof(char *));
+    //capacidade calculada a partir do tamanho real do arquivo de dados,
+    //evitando um array de tamanho fixo quando ha muitos registros
+    fseek(arq, 0, SEEK_END);
+    long fileSize = ftell(arq);
+    int maxPossibleRegisters = (int)((fileSize - HEADER_SIZE) / REGISTRY_SIZE);
+    if (maxPossibleRegisters <= 0) maxPossibleRegisters = 1;
+
+    char **uniqueStations = malloc(maxPossibleRegisters * sizeof(char *));
     int numUniqueStations = 0;
-    Pair *uniquePairs = malloc(5000 * sizeof(Pair));
+    Pair *uniquePairs = malloc(maxPossibleRegisters * sizeof(Pair));
     int numUniquePairs = 0;
 
     //posiciona logo apos o cabecalho e le registro por registro
@@ -299,4 +306,47 @@ void writeHeader(FILE *arq, Header *cab)
     fwrite(&cab->proxRRN,         sizeof(int),  1, arq);
     fwrite(&cab->nroEstacoes,     sizeof(int),  1, arq);
     fwrite(&cab->nroParesEstacao, sizeof(int),  1, arq);
+}
+
+//carrega o indice inteiro em RAM, busca o codEstacao via binaria e libera o array
+//centraliza o padrao repetido nas funcionalidades 6, 7 e 9
+int localizarRRNViaIndice(FILE *primaryIndexArchive, int codEstacao)
+{
+    fseek(primaryIndexArchive, 0, SEEK_END);
+    long indexByteSize = (ftell(primaryIndexArchive) - 1) / sizeof(Index);
+
+    Index *indexArray = (Index *) malloc(sizeof(Index) * indexByteSize);
+
+    fseek(primaryIndexArchive, 1, SEEK_SET);
+    fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
+
+    int rrn = binarySearchOnIndex(indexArray, indexByteSize, codEstacao);
+    free(indexArray);
+
+    return rrn;
+}
+
+//marca dados e indice como inconsistentes antes de iniciar qualquer alteracao em disco
+//centraliza o padrao repetido nas funcionalidades 7, 8 e 9
+void marcarArquivosInconsistentes(FILE *registryBinaryFile, FILE *primaryIndexArchive)
+{
+    char inconsistente = STATUS_INCONSISTENT;
+    fseek(registryBinaryFile, 0, SEEK_SET);
+    fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
+
+    char inconsistenteIndice = INDEX_INCONSISTENT;
+    fseek(primaryIndexArchive, 0, SEEK_SET);
+    fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
+}
+
+//grava o cabecalho atualizado e marca dados e indice como consistentes novamente
+//centraliza o padrao repetido nas funcionalidades 7, 8 e 9
+void marcarArquivosConsistentes(FILE *registryBinaryFile, FILE *primaryIndexArchive, Header *cab)
+{
+    cab->status = STATUS_CONSISTENT;
+    writeHeader(registryBinaryFile, cab);
+
+    fseek(primaryIndexArchive, 0, SEEK_SET);
+    char consistenteIndice = INDEX_CONSISTENT;
+    fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
 }

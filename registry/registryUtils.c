@@ -180,9 +180,9 @@ void printRegistry(Registry *newRegistry)
         printf("%d ", newRegistry->codLinhaIntegra);
 
     if (newRegistry->codEstIntegra == -1)
-        printf("NULO \n");
+        printf("NULO\n");
     else
-        printf("%d \n", newRegistry->codEstIntegra);
+        printf("%d\n", newRegistry->codEstIntegra);
 }
 
 void freeRegistry(Registry *newRegistry)

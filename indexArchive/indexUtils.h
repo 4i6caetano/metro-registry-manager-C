@@ -139,4 +139,43 @@ void readHeader(FILE *arq, Header *cab);
  */
 void writeHeader(FILE *arq, Header *cab);
 
+/**
+ * @brief Locates the RRN of a record through a binary search on the index file.
+ *
+ * @details Encapsulates the pattern repeated across functionalities [6], [7] and [9]:
+ * loads every entry of the primary index file into RAM, performs a binary search for
+ * the given primary key, frees the temporary array and returns the result. Centralizing
+ * it here avoids three nearly identical copies of the same load+search+free sequence.
+ *
+ * @param primaryIndexArchive Pointer to the primary index file (must be open for reading).
+ * @param codEstacao The primary key being searched for.
+ * @return int Returns the RRN associated with codEstacao, or -1 if it is not indexed.
+ */
+int localizarRRNViaIndice(FILE *primaryIndexArchive, int codEstacao);
+
+/**
+ * @brief Marks both the data file and the index file as inconsistent.
+ *
+ * @details Used at the start of any operation that modifies disk content (remove,
+ * insert, update). If the program crashes mid-operation, both files remain flagged as
+ * inconsistent, signaling that they should not be trusted by later executions.
+ *
+ * @param registryBinaryFile Pointer to the data file (must be open for writing).
+ * @param primaryIndexArchive Pointer to the primary index file (must be open for writing).
+ */
+void marcarArquivosInconsistentes(FILE *registryBinaryFile, FILE *primaryIndexArchive);
+
+/**
+ * @brief Marks both the data file and the index file as consistent again.
+ *
+ * @details Writes the updated header (with the current status, stack top, next RRN and
+ * counters) back to the data file, then flags the index file as consistent. Used at the
+ * end of remove/insert/update operations once every change has been safely written.
+ *
+ * @param registryBinaryFile Pointer to the data file (must be open for writing).
+ * @param primaryIndexArchive Pointer to the primary index file (must be open for writing).
+ * @param cab Pointer to the in-memory header holding the values to persist.
+ */
+void marcarArquivosConsistentes(FILE *registryBinaryFile, FILE *primaryIndexArchive, Header *cab);
+
 #endif

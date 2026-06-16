@@ -9,38 +9,15 @@
 #include "functions.h"
 #include "header.h"
 
-void BinarioNaTela(char *arquivo)
-{
-    FILE *fs;
-    if (arquivo == NULL || !(fs = fopen(arquivo, "rb"))) // If the file's name is invalid or it cannot open it, does error handling.
-    {
-        fprintf(stderr,
-                "ERRO AO ESCREVER O BINARIO NA TELA (função binarioNaTela): "
-                "não foi possível abrir o arquivo que me passou para leitura. "
-                "Ele existe e você tá passando o nome certo? Você lembrou de "
-                "fechar ele com fclose depois de usar?\n");
-        return;
-    }
-
-    fseek(fs, 0, SEEK_END); // Places the 'cursor' on the last byte of the file.
-    size_t fl = ftell(fs);  // Saves it on 'fl'.
-
-    fseek(fs, 0, SEEK_SET);                          // Place the 'cursor' on the first byte.
-    unsigned char *mb = (unsigned char *)malloc(fl); // Gets the size on 'fl' and requests a memory of that size.
-    fread(mb, 1, fl, fs);                            // pointer to memory where data will be saved, size of each element, how much it has to read (n*1 byte, total size), the target FILE.
-
-    unsigned long cs = 0;
-    for (unsigned long i = 0; i < fl; i++) // until its smaller than the FILE size:
-    {
-        cs += (unsigned long)mb[i]; // adds the binary to cs.
-    }
-
-    printf("%lf\n", (cs / (double)100)); // prints it as a double.
-
-    free(mb);   // free memory adress
-    fclose(fs); // close the FILE
-}
-
+/* BinarioNaTela é a função fornecida pela disciplina (obrigatória pelo
+ * enunciado); sua implementação oficial está em fornecidas.c, compilado
+ * junto pelo makefile.
+ *
+ * scan_quote_string é apenas opcional pelo enunciado ("pode-se usar"),
+ * então mantemos aqui a nossa própria implementação: ela para a leitura
+ * de um valor sem aspas em espaço/'\r'/'\n' (em vez de pular a quebra de
+ * linha como a oficial faz), evitando concatenar com o próximo token
+ * quando o valor tem um único caractere (ex.: codEstacao "1"). */
 void ScanQuoteString(char *str)
 {
     char R;

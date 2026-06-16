@@ -27,17 +27,22 @@ int createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIn
     char indexConsistency = INDEX_INCONSISTENT;
     fwrite(&indexConsistency, sizeof(char), 1, primaryIndexArchive); // defines consistency
 
-    Index unorderedIndex[5000];
-    Registry temporaryRegistry;
+    /* capacidade do array calculada a partir do tamanho real do arquivo de dados,
+       evitando estourar um array de tamanho fixo quando há muitos registros */
+    fseek(registryBinaryFile, 0, SEEK_END);
+    long dataFileSize = ftell(registryBinaryFile);
+    int maxPossibleRegisters = (dataFileSize - HEADER_SIZE) / REGISTRY_SIZE;
+    if (maxPossibleRegisters < 0) maxPossibleRegisters = 0;
 
-    int rrn = 0;
+    Index *unorderedIndex = (Index *) malloc(sizeof(Index) * (maxPossibleRegisters > 0 ? maxPossibleRegisters : 1));
+    Registry temporaryRegistry;
 
     int numberOfRegisters = 0; // total of registers
     int numberOfValidRegisters = 0;
 
     int comparison = 0;
 
-    fseek(registryBinaryFile, 17, SEEK_SET);
+    fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
 
     while(binaryToRegistry(&temporaryRegistry, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS)
     { // while registers exist, read it and save it on RAM
@@ -72,6 +77,8 @@ int createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIn
 
     fseek(primaryIndexArchive, 0, SEEK_SET);
     fwrite(&indexConsistency, sizeof(char), 1, primaryIndexArchive);
+
+    free(unorderedIndex);
 
     return FUNCTION_SUCESS;
 }
@@ -140,26 +147,12 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
         if(indexCodEstacao != -1) // If we want to search for codEstacao, we use an indexed search.
         {
             int value = atoi(fieldsToBeSearched[indexCodEstacao].valueOfTheField);
-                 
-            fseek(primaryIndexArchive, 0, SEEK_END);
 
-            long indexByteSize = (ftell(primaryIndexArchive) - 1) / sizeof(Index);
-            //getting the whole size of the data
-
-            Index *indexArray = (Index *) malloc((sizeof(Index)) * indexByteSize);
-            // allocating in memory
-
-            fseek(primaryIndexArchive, 1, SEEK_SET);
-            fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
-            // moving the cursor and reading it all
-
-            int foundRRN = binarySearchOnIndex(indexArray, indexByteSize, value);
-
-            free(indexArray);
+            int foundRRN = localizarRRNViaIndice(primaryIndexArchive, value);
 
             if (foundRRN != -1)
             {
-                int byteOffset = HEADER_SIZE + (foundRRN * 80);
+                int byteOffset = HEADER_SIZE + (foundRRN * REGISTRY_SIZE);
                 fseek(registryBinaryFile, byteOffset, SEEK_SET);
 
                singleSearchInRegister(temporaryRegister, registryBinaryFile, fieldsToBeSearched, numberOfFiltersApplied, &registersThatFulfillTheSearch);
@@ -179,7 +172,9 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
             printf("Registro inexistente.\n");
         }
 
-        if(quantityOfSearches < numberOfSearches - 1)
+        //separa o resultado de cada uma das n buscas com uma linha em branco,
+        //exceto apos a ultima, que nao deve deixar linha em branco sobrando
+        if (quantityOfSearches < numberOfSearches - 1)
         {
             printf("\n");
         }
@@ -204,13 +199,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
     //marca ambos os arquivos como inconsistentes antes de comecar a alterar
     //se o programa cair no meio da operacao os arquivos ficam sinalizados como invalidos
-    char inconsistente = STATUS_INCONSISTENT;
-    fseek(registryBinaryFile, 0, SEEK_SET);
-    fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
-
-    char inconsistenteIndice = INDEX_INCONSISTENT;
-    fseek(primaryIndexArchive, 0, SEEK_SET);
-    fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
+    marcarArquivosInconsistentes(registryBinaryFile, primaryIndexArchive);
 
     //le o cabecalho para acessar o topo atual da pilha de registros removidos
     Header cab;
@@ -234,39 +223,29 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
         if (codBuscado != -2) {
             //busca indexada: vai direto ao RRN pelo indice
-            fseek(primaryIndexArchive, 0, SEEK_END);
-            long indexByteSize = (ftell(primaryIndexArchive) - 1) / sizeof(Index);
-            Index *indexArray = (Index *) malloc(sizeof(Index) * indexByteSize);
-
-            fseek(primaryIndexArchive, 1, SEEK_SET);
-            fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
-
-            int rrn = binarySearchOnIndex(indexArray, indexByteSize, codBuscado);
-            free(indexArray); // Libera a RAM
+            int rrn = localizarRRNViaIndice(primaryIndexArchive, codBuscado);
 
             if (rrn != -1) {
-                if (rrn >= 0) {
-                    fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
-                    Registry reg;
-                    if (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
-                        if (reg.removido == IS_NOT_REMOVED && isTheRegistryCorrespondent(&reg, campos, m)) {
-                            int cod = reg.codEstacao;
-                            freeRegistry(&reg); //libera antes de reposicionar o cursor
+                fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
+                Registry reg;
+                if (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
+                    if (reg.removido == IS_NOT_REMOVED && isTheRegistryCorrespondent(&reg, campos, m)) {
+                        int cod = reg.codEstacao;
+                        freeRegistry(&reg); //libera antes de reposicionar o cursor
 
-                            //sobrescreve apenas os primeiros 5 bytes do registro:
-                            //  byte 0: removido = '1' (marca como deletado)
-                            //  bytes 1-4: proximo = topo atual (encadeia na pilha)
-                            //os demais 75 bytes permanecem inalterados (dados ficam la)
-                            fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
-                            char marcaRemovido = IS_REMOVED;
-                            fwrite(&marcaRemovido, sizeof(char), 1, registryBinaryFile);
-                            fwrite(&cab.topo,      sizeof(int),  1, registryBinaryFile);
-                            cab.topo = rrn; //esse RRN e o novo topo da pilha
+                        //sobrescreve apenas os primeiros 5 bytes do registro:
+                        //  byte 0: removido = '1' (marca como deletado)
+                        //  bytes 1-4: proximo = topo atual (encadeia na pilha)
+                        //os demais 75 bytes permanecem inalterados (dados ficam la)
+                        fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
+                        char marcaRemovido = IS_REMOVED;
+                        fwrite(&marcaRemovido, sizeof(char), 1, registryBinaryFile);
+                        fwrite(&cab.topo,      sizeof(int),  1, registryBinaryFile);
+                        cab.topo = rrn; //esse RRN e o novo topo da pilha
 
-                            removeByIndex(primaryIndexArchive, cod);
-                        } else {
-                            freeRegistry(&reg);
-                        }
+                        removeByIndex(primaryIndexArchive, cod);
+                    } else {
+                        freeRegistry(&reg);
                     }
                 }
             }
@@ -313,14 +292,8 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
         cab.nroParesEstacao += paresDepois - paresAntes;
     }
 
-    //grava o cabecalho atualizado e marca o arquivo de dados como consistente
-    cab.status = STATUS_CONSISTENT;
-    writeHeader(registryBinaryFile, &cab);
-
-    //marca o arquivo de indice como consistente
-    fseek(primaryIndexArchive, 0, SEEK_SET);
-    char consistenteIndice = INDEX_CONSISTENT;
-    fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
+    //grava o cabecalho atualizado e marca dados e indice como consistentes
+    marcarArquivosConsistentes(registryBinaryFile, primaryIndexArchive, &cab);
 
     return FUNCTION_SUCESS;
 }
@@ -341,13 +314,7 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
         return FUNCTION_FAILURE;
 
     //marca ambos os arquivos como inconsistentes antes de alterar
-    char inconsistente = STATUS_INCONSISTENT;
-    fseek(registryBinaryFile, 0, SEEK_SET);
-    fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
-
-    char inconsistenteIndice = INDEX_INCONSISTENT;
-    fseek(primaryIndexArchive, 0, SEEK_SET);
-    fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
+    marcarArquivosInconsistentes(registryBinaryFile, primaryIndexArchive);
 
     //le o cabecalho para saber o topo da pilha e o proximo RRN disponivel
     Header cab;
@@ -398,14 +365,8 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
         cab.nroParesEstacao += paresDepois - paresAntes;
     }
 
-    //grava o cabecalho com topo e proxRRN atualizados e marca como consistente
-    cab.status = STATUS_CONSISTENT;
-    writeHeader(registryBinaryFile, &cab);
-
-    //marca o arquivo de indice como consistente
-    fseek(primaryIndexArchive, 0, SEEK_SET);
-    char consistenteIndice = INDEX_CONSISTENT;
-    fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
+    //grava o cabecalho com topo e proxRRN atualizados e marca dados e indice como consistentes
+    marcarArquivosConsistentes(registryBinaryFile, primaryIndexArchive, &cab);
 
     return FUNCTION_SUCESS;
 }
@@ -425,13 +386,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
         return FUNCTION_FAILURE;
 
     //marca ambos os arquivos como inconsistentes antes de alterar
-    char inconsistente = STATUS_INCONSISTENT;
-    fseek(registryBinaryFile, 0, SEEK_SET);
-    fwrite(&inconsistente, sizeof(char), 1, registryBinaryFile);
-
-    char inconsistenteIndice = INDEX_INCONSISTENT;
-    fseek(primaryIndexArchive, 0, SEEK_SET);
-    fwrite(&inconsistenteIndice, sizeof(char), 1, primaryIndexArchive);
+    marcarArquivosInconsistentes(registryBinaryFile, primaryIndexArchive);
 
     //le o cabecalho para acessar proxRRN (total de slots ocupados no arquivo)
     Header cab;
@@ -464,15 +419,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
         if (codBuscado != -2) {
             //busca indexada: localiza o RRN pelo indice e vai direto ao slot
-            fseek(primaryIndexArchive, 0, SEEK_END);
-            long indexByteSize = (ftell(primaryIndexArchive) - 1) / sizeof(Index);
-            Index *indexArray = (Index *) malloc(sizeof(Index) * indexByteSize);
-
-            fseek(primaryIndexArchive, 1, SEEK_SET);
-            fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
-
-            int rrn = binarySearchOnIndex(indexArray, indexByteSize, codBuscado);
-            free(indexArray); // Libera a RAM
+            int rrn = localizarRRNViaIndice(primaryIndexArchive, codBuscado);
 
             if (rrn != -1) {
                 fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
@@ -544,14 +491,8 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
         cab.nroParesEstacao += paresDepois - paresAntes;
     }
 
-    //grava o cabecalho atualizado e marca o arquivo de dados como consistente
-    cab.status = STATUS_CONSISTENT;
-    writeHeader(registryBinaryFile, &cab);
-
-    //marca o arquivo de indice como consistente
-    fseek(primaryIndexArchive, 0, SEEK_SET);
-    char consistenteIndice = INDEX_CONSISTENT;
-    fwrite(&consistenteIndice, sizeof(char), 1, primaryIndexArchive);
+    //grava o cabecalho atualizado e marca dados e indice como consistentes
+    marcarArquivosConsistentes(registryBinaryFile, primaryIndexArchive, &cab);
 
     return FUNCTION_SUCESS;
 }

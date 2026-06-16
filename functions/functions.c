@@ -22,10 +22,20 @@ int csvToBinary(FILE *inputCSVFile, FILE *binaryFile)
   writeInitialHeader(binaryFile); /* writes the first memory allocation, the Header of the File*/
   int rrnCounter = 0;
 
-  char **uniqueStations = malloc(5000 * sizeof(char *));
+  /* conta quantas linhas de dados existem no CSV para alocar os arrays de
+     únicos com capacidade suficiente (cada linha contribui no máximo
+     1 estação única e 1 par único), evitando um array de tamanho fixo */
+  int maxPossibleUniques = 0;
+  fgets(buffer, sizeof(buffer), inputCSVFile); // pula a linha de cabeçalho
+  while (fgets(buffer, sizeof(buffer), inputCSVFile) != NULL)
+    maxPossibleUniques++;
+  if (maxPossibleUniques == 0) maxPossibleUniques = 1;
+  fseek(inputCSVFile, 0, SEEK_SET);
+
+  char **uniqueStations = malloc(maxPossibleUniques * sizeof(char *));
   int numUniqueStations = 0;
 
-  Pair *uniquePairs = malloc(5000 * sizeof(Pair));
+  Pair *uniquePairs = malloc(maxPossibleUniques * sizeof(Pair));
   int numUniquePairs = 0;
 
   fgets(buffer, sizeof(buffer), inputCSVFile); // reads the Header line and skips it.
