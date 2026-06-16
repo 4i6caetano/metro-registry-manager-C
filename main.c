@@ -9,6 +9,15 @@
 #include "functionsIndex.h"
 #include "index.h"
 
+/**
+ * Developers:
+ * João Pedro Correia Caetano, NUSP 16987067
+ * André Luiz Pereira, NUSP 17068199
+ * This code, as well as the process of its development, can be acessed through its github repository:
+ * https://github.com/4i6caetano/metro-registry-manager-C
+ * Feel free to check it out!
+ */
+
 typedef enum function
 {
   _,                        /**< campo vazio, valor '0' */

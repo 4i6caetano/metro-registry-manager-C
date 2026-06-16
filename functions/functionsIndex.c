@@ -315,7 +315,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
     //grava o cabecalho atualizado e marca o arquivo de dados como consistente
     cab.status = STATUS_CONSISTENT;
-    escreverCabecalho(registryBinaryFile, &cab);
+    writeHeader(registryBinaryFile, &cab);
 
     //marca o arquivo de indice como consistente
     fseek(primaryIndexArchive, 0, SEEK_SET);
@@ -393,14 +393,14 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
     //calcula o delta de unicos e aplica nos contadores do cabecalho
     {
         int estDepois, paresDepois;
-        contarUnicosValidos(registryBinaryFile, &estDepois, &paresDepois);
+        countValidRecords(registryBinaryFile, &estDepois, &paresDepois);
         cab.nroEstacoes     += estDepois   - estAntes;
         cab.nroParesEstacao += paresDepois - paresAntes;
     }
 
     //grava o cabecalho com topo e proxRRN atualizados e marca como consistente
     cab.status = STATUS_CONSISTENT;
-    escreverCabecalho(registryBinaryFile, &cab);
+    writeHeader(registryBinaryFile, &cab);
 
     //marca o arquivo de indice como consistente
     fseek(primaryIndexArchive, 0, SEEK_SET);
@@ -439,7 +439,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
     //snapshot dos contadores antes das atualizacoes para calcular o delta ao final
     int estAntes, paresAntes;
-    contarUnicosValidos(registryBinaryFile, &estAntes, &paresAntes);
+    countValidRecords(registryBinaryFile, &estAntes, &paresAntes);
 
     for (int i = 0; i < numberOfUpdates; i++) {
         //le os m criterios de busca (campo + valor a comparar)
@@ -493,7 +493,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                         //se o codEstacao mudou: remove a entrada antiga do indice
                         //e insere a nova com o mesmo RRN mas o novo codigo
                         if (codNovo != codAntigo) {
-                            removerDoIndice(primaryIndexArchive, codAntigo);
+                            removeByIndex(primaryIndexArchive, codAntigo);
                             insertOnIndex(primaryIndexArchive, codNovo, rrn);
                         }
                     } else {
@@ -524,7 +524,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                     registryToBinary(&reg, registryBinaryFile);
 
                     if (codNovo != codAntigo) {
-                        removerDoIndice(primaryIndexArchive, codAntigo);
+                        removeByIndex(primaryIndexArchive, codAntigo);
                         insertOnIndex(primaryIndexArchive, codNovo, rrn);
                     }
                 } else {
@@ -539,14 +539,14 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
     //calcula o delta de unicos e aplica nos contadores do cabecalho
     {
         int estDepois, paresDepois;
-        contarUnicosValidos(registryBinaryFile, &estDepois, &paresDepois);
+        countValidRecords(registryBinaryFile, &estDepois, &paresDepois);
         cab.nroEstacoes     += estDepois   - estAntes;
         cab.nroParesEstacao += paresDepois - paresAntes;
     }
 
     //grava o cabecalho atualizado e marca o arquivo de dados como consistente
     cab.status = STATUS_CONSISTENT;
-    escreverCabecalho(registryBinaryFile, &cab);
+    writeHeader(registryBinaryFile, &cab);
 
     //marca o arquivo de indice como consistente
     fseek(primaryIndexArchive, 0, SEEK_SET);
