@@ -13,7 +13,7 @@
 //  nPares -> quantos pares (codEstacao, codProxEstacao) distintos existem
 //isso e usado para calcular o quanto nroEstacoes e nroParesEstacao mudam
 //apos uma insercao, remocao ou atualizacao (calculo via delta antes/depois)
-void contarUnicosValidos(FILE *arq, int *nEst, int *nPares)
+void countValidRecords(FILE *arq, int *nEst, int *nPares)
 {
     char **uniqueStations = malloc(5000 * sizeof(char *));
     int numUniqueStations = 0;
@@ -46,7 +46,7 @@ void contarUnicosValidos(FILE *arq, int *nEst, int *nPares)
 
 //calcula quantas entradas de dados ha no arquivo de indice
 //tamanho total menos 1 byte de cabecalho dividido por 8 bytes por entrada
-int contarEntradasIndice(FILE *arqIndice)
+int countNumberOfRecords(FILE *arqIndice)
 {
     fseek(arqIndice, 0, SEEK_END);
     long tamanho = ftell(arqIndice);
@@ -56,9 +56,9 @@ int contarEntradasIndice(FILE *arqIndice)
 //remove do arquivo de indice a entrada com o codEstacao informado
 //estrategia: carrega tudo na memoria, reescreve pulando a entrada removida,
 //depois trunca o arquivo para o novo tamanho (sem isso sobra lixo no final)
-void removerDoIndice(FILE *arqIndice, int codEstacao)
+void removeByIndex(FILE *arqIndice, int codEstacao)
 {
-    int total = contarEntradasIndice(arqIndice);
+    int total = countNumberOfRecords(arqIndice);
     if (total == 0) return;
 
     Index *entradas = malloc(total * sizeof(Index));
@@ -92,9 +92,9 @@ void removerDoIndice(FILE *arqIndice, int codEstacao)
 //insere uma nova entrada no arquivo de indice mantendo a ordem crescente por codEstacao
 //estrategia: carrega tudo na memoria, acha onde inserir, empurra os maiores uma posicao
 //para a direita abrindo espaco, depois reescreve o arquivo inteiro com a nova entrada
-void inserirNoIndice(FILE *arqIndice, int codEstacao, int rrn)
+void insertOnIndex(FILE *arqIndice, int codEstacao, int rrn)
 {
-    int total = contarEntradasIndice(arqIndice);
+    int total = countNumberOfRecords(arqIndice);
     //aloca espaco para total + 1 porque vai acrescentar uma entrada nova
     Index *entradas = malloc((total + 1) * sizeof(Index));
 
@@ -136,7 +136,7 @@ void inserirNoIndice(FILE *arqIndice, int codEstacao, int rrn)
 //aplica os p pares (campo, novo valor) sobre o registro que esta em memoria
 //para campos string: libera a string antiga antes de alocar a nova
 //valor vazio "" vira -1 para inteiros e NULL para strings (campo nulo)
-void aplicarAtualizacoes(Registry *reg, Field *camposAtu, int p)
+void updateRecords(Registry *reg, Field *camposAtu, int p)
 {
     for (int k = 0; k < p; k++) {
         if (strcmp(camposAtu[k].nameOfTheField, "codEstacao") == 0) {
@@ -181,7 +181,7 @@ void aplicarAtualizacoes(Registry *reg, Field *camposAtu, int p)
 }
 
 // 1. Verifica se o codEstacao é um dos filtros aplicados pelo usuário.
-int obterCodEstacaoBusca(Field *campos, int m)
+int getCodEstacaoForSearch(Field *campos, int m)
 {
     for (int k = 0; k < m; k++) {
         if (strcmp(campos[k].nameOfTheField, "codEstacao") == 0)
@@ -191,7 +191,7 @@ int obterCodEstacaoBusca(Field *campos, int m)
 }
 
 // 2. Testa o registro atual contra todos os filtros (usada nas funções 7 e 9 dele)
-int registroCorresponde(Registry *reg, Field *campos, int m)
+int isTheRegistryCorrespondent(Registry *reg, Field *campos, int m)
 {
     for (int k = 0; k < m; k++) {
         if (strcmp(campos[k].nameOfTheField, "codEstacao") == 0) {
@@ -237,7 +237,7 @@ int registroCorresponde(Registry *reg, Field *campos, int m)
 }
 
 // 3. Lê dados brutos do terminal para inserir um registro novo (Funcionalidade 8)
-void lerRegistroStdin(Registry *reg)
+void readRegistryStdin(Registry *reg)
 {
     char buf[500];
 
@@ -281,7 +281,7 @@ void lerRegistroStdin(Registry *reg)
     reg->proximo  = -1;
 }
 
-void lerCabecalho(FILE *arq, Header *cab)
+void readHeader(FILE *arq, Header *cab)
 {
     fseek(arq, 0, SEEK_SET);
     fread(&cab->status,          sizeof(char), 1, arq);
@@ -291,7 +291,7 @@ void lerCabecalho(FILE *arq, Header *cab)
     fread(&cab->nroParesEstacao, sizeof(int),  1, arq);
 }
 
-void escreverCabecalho(FILE *arq, Header *cab)
+void writeHeader(FILE *arq, Header *cab)
 {
     fseek(arq, 0, SEEK_SET);
     fwrite(&cab->status,          sizeof(char), 1, arq);

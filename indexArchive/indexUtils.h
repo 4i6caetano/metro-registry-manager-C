@@ -7,39 +7,136 @@
 #include "utils.h"
 #include "header.h"
 
+/**
+ * @brief Scans the data file to count unique stations and pairs.
+ *
+ * @details This routine reads all valid (logically non-removed) records from the data 
+ * file. It keeps track of station names and station code pairs that have already been 
+ * seen. Ultimately, it updates the provided pointers with the total count of unique 
+ * values, which is essential for maintaining header consistency after insert, remove, 
+ * or update operations.
+ *
+ * @param arq Pointer to the binary data file (must be open for reading).
+ * @param nEst Pointer to the variable that will store the number of unique stations.
+ */
+void countValidRecords(FILE *arq, int *nEst, int *nPares);
 
-void contarUnicosValidos(FILE *arq, int *nEst, int *nPares);
+/**
+ * @brief Calculates the total number of records present in the index file.
+ *
+ * @details This function moves the cursor to the end of the index file to determine 
+ * its total size in bytes. It then subtracts the header size (1 byte) and divides the 
+ * remainder by the fixed size of each index record (8 bytes), returning the exact 
+ * amount of registered entries.
+ *
+ * @param arqIndice Pointer to the index file (must be open for reading).
+ * @return int Returns the total number of index entries present in the file.
+ */
+int countNumberOfRecords(FILE *arqIndice);
 
-//calcula quantas entradas de dados ha no arquivo de indice
-//tamanho total menos 1 byte de cabecalho dividido por 8 bytes por entrada
-int contarEntradasIndice(FILE *arqIndice);
+/**
+ * @brief Removes a specific entry from the index file on disk.
+ *
+ * @details This routine loads all index entries into main memory. Next, it rewrites 
+ * the file from the beginning (after the header), skipping the entry that matches the 
+ * specified search key. Finally, it uses system operations to truncate the file, 
+ * removing any idle space or residual garbage at the end.
+ *
+ * @param arqIndice Pointer to the index file (must be open for reading and writing).
+ * @param codEstacao The primary key of the entry to be removed.
+ */
+void removeByIndex(FILE *arqIndice, int codEstacao);
 
-//remove do arquivo de indice a entrada com o codEstacao informado
-//estrategia: carrega tudo na memoria, reescreve pulando a entrada removida,
-//depois trunca o arquivo para o novo tamanho (sem isso sobra lixo no final)
-void removerDoIndice(FILE *arqIndice, int codEstacao);
+/**
+ * @brief Inserts a new entry into the index file while maintaining order.
+ *
+ * @details This operation loads current entries into memory, identifies the correct 
+ * insertion position to maintain the ascending order of the primary key, shifts larger 
+ * elements to the right, and inserts the new value. In the end, it rewrites the 
+ * updated index file to the disk.
+ *
+ * @param arqIndice Pointer to the index file (must be open for reading and writing).
+ * @param codEstacao The primary key of the new entry to be inserted.
+ * @param rrn The corresponding Relative Record Number (RRN) in the data file.
+ */
+void insertOnIndex(FILE *arqIndice, int codEstacao, int rrn);
 
-//insere uma nova entrada no arquivo de indice mantendo a ordem crescente por codEstacao
-//estrategia: carrega tudo na memoria, acha onde inserir, empurra os maiores uma posicao
-//para a direita abrindo espaco, depois reescreve o arquivo inteiro com a nova entrada
-void inserirNoIndice(FILE *arqIndice, int codEstacao, int rrn);
+/**
+ * @brief Updates the fields of a record held in main memory.
+ *
+ * @details This routine iterates over a set of update filters and modifies the 
+ * corresponding fields in the RAM data structure. It automatically handles the freeing 
+ * and reallocation of memory for variable-length fields (strings) and properly handles 
+ * null values, converting empty strings to -1 (for integers) or to null pointers.
+ *
+ * @param reg Pointer to the record structure that will be modified.
+ * @param camposAtu Array containing the pairs of field names and their new values.
+ * @param p The number of fields that must be updated.
+ */
+void updateRecords(Registry *reg, Field *camposAtu, int p);
 
-//aplica os p pares (campo, novo valor) sobre o registro que esta em memoria
-//para campos string: libera a string antiga antes de alocar a nova
-//valor vazio "" vira -1 para inteiros e NULL para strings (campo nulo)
-void aplicarAtualizacoes(Registry *reg, Field *camposAtu, int p);
+/**
+ * @brief Checks if the primary key is present among the search filters.
+ *
+ * @details This function scans the list of user-defined criteria to find out if the 
+ * main identification key was provided. This is used to decide whether the system can 
+ * optimize the operation by performing a binary search through the index.
+ *
+ * @param campos Array containing the provided search criteria.
+ * @param m The number of criteria present in the array.
+ * @return int Returns the numeric value of the primary key if it is in the filters, 
+ * or -2 if the primary key is not part of the search criteria.
+ */
+int getCodEstacaoForSearch(Field *campos, int m);
 
-// 1. Verifica se o codEstacao é um dos filtros aplicados pelo usuário.
-int obterCodEstacaoBusca(Field *campos, int m);
+/**
+ * @brief Evaluates whether a record meets all specified search criteria.
+ *
+ * @details This routine iteratively compares the fields of the record loaded in memory 
+ * against a list of filters. The record is only considered compatible if it positively 
+ * validates against absolutely all provided criteria (a logical AND operation).
+ *
+ * @param reg Pointer to the record structure to be evaluated.
+ * @param campos Array containing the provided search criteria.
+ * @param m The number of filters to be applied.
+ * @return int Returns 1 if the record matches all filters, or 0 otherwise.
+ */
+int isTheRegistryCorrespondent(Registry *reg, Field *campos, int m);
 
-// 2. Testa o registro atual contra todos os filtros (usada nas funções 7 e 9 dele)
-int registroCorresponde(Registry *reg, Field *campos, int m);
+/**
+ * @brief Reads and formats a new record from the standard input.
+ *
+ * @details This function captures data typed in the terminal (usually employing handling 
+ * for quotes and empty strings) and populates a record structure. It handles dynamic 
+ * allocation for text fields and initializes standard control fields, such as the 
+ * non-removed flag and null linking pointers.
+ *
+ * @param reg Pointer to the record structure that will store the read data.
+ */
+void readRegistryStdin(Registry *reg);
 
-// 3. Lê dados brutos do terminal para inserir um registro novo (Funcionalidade 8)
-void lerRegistroStdin(Registry *reg);
+/**
+ * @brief Loads control data from the file into a header structure in memory.
+ *
+ * @details This function sets the read cursor to the absolute beginning of the file 
+ * (byte 0) and sequentially extracts the consistency status and all system counters 
+ * (such as the top of the removed records stack and the next RRN).
+ *
+ * @param arq Pointer to the binary file (must be open for reading).
+ * @param cab Pointer to the structure where the header data will be stored.
+ */
+void readHeader(FILE *arq, Header *cab);
 
-void lerCabecalho(FILE *arq, Header *cab);
-
-void escreverCabecalho(FILE *arq, Header *cab);
+/**
+ * @brief Saves the updated header structure data back to the disk.
+ *
+ * @details This routine ensures that state information and record counters remain 
+ * persistent. It returns the cursor to byte zero of the file and sequentially writes 
+ * the current status and the essential control variables for database integrity.
+ *
+ * @param arq Pointer to the binary file (must be open for writing).
+ * @param cab Pointer to the structure containing the header data to be written.
+ */
+void writeHeader(FILE *arq, Header *cab);
 
 #endif

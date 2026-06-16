@@ -32,7 +32,7 @@ int createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIn
 
     int rrn = 0;
 
-    int numberOfRegisters = 0;
+    int numberOfRegisters = 0; // total of registers
     int numberOfValidRegisters = 0;
 
     int comparison = 0;
@@ -40,7 +40,7 @@ int createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIn
     fseek(registryBinaryFile, 17, SEEK_SET);
 
     while(binaryToRegistry(&temporaryRegistry, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS)
-    {
+    { // while registers exist, read it and save it on RAM
 
 
         if(temporaryRegistry.removido == IS_NOT_REMOVED)
@@ -55,9 +55,10 @@ int createPrimaryIndexArchiveInBinary( FILE *registryBinaryFile, FILE *primaryIn
     }
 
     qsort(unorderedIndex, numberOfValidRegisters, sizeof(Index), compareCodEstacao);
+    // the index needs to be in crescent order, so we call qsort
 
     //after ordered, now we write it in order on the definitive file.
-    // We have now an orderer array
+    // We have now an ordered array
 
     while(comparison < numberOfValidRegisters)
     {
@@ -133,21 +134,24 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
             if(strcmp(fieldsToBeSearched[f].nameOfTheField, "codEstacao") == 0)
             {
                 indexCodEstacao = f;
-            }
+            } // checks for codEstacao
         }
 
-        if(indexCodEstacao != -1)
+        if(indexCodEstacao != -1) // If we want to search for codEstacao, we use an indexed search.
         {
             int value = atoi(fieldsToBeSearched[indexCodEstacao].valueOfTheField);
                  
             fseek(primaryIndexArchive, 0, SEEK_END);
 
             long indexByteSize = (ftell(primaryIndexArchive) - 1) / sizeof(Index);
+            //getting the whole size of the data
 
             Index *indexArray = (Index *) malloc((sizeof(Index)) * indexByteSize);
+            // allocating in memory
 
             fseek(primaryIndexArchive, 1, SEEK_SET);
             fread(indexArray, sizeof(Index), indexByteSize, primaryIndexArchive);
+            // moving the cursor and reading it all
 
             int foundRRN = binarySearchOnIndex(indexArray, indexByteSize, value);
 
@@ -162,7 +166,7 @@ int searchOnIndexArchive( FILE *registryBinaryFile, FILE *primaryIndexArchive, i
             }
         }
 
-        else{
+        else{ //else, use the sequential search previously used on function searchData
 
         fseek(registryBinaryFile, HEADER_SIZE, SEEK_SET);
 
@@ -210,11 +214,11 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
     //le o cabecalho para acessar o topo atual da pilha de registros removidos
     Header cab;
-    lerCabecalho(registryBinaryFile, &cab);
+    readHeader(registryBinaryFile, &cab);
 
     //snapshot dos contadores antes das remocoes para calcular o delta ao final
     int estAntes, paresAntes;
-    contarUnicosValidos(registryBinaryFile, &estAntes, &paresAntes);
+    countValidRecords(registryBinaryFile, &estAntes, &paresAntes);
 
     for (int i = 0; i < numberOfSearches; i++) {
         int m;
@@ -226,7 +230,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
             ScanQuoteString(campos[j].valueOfTheField);
         }
 
-        int codBuscado = obterCodEstacaoBusca(campos, m);
+        int codBuscado = getCodEstacaoForSearch(campos, m);
 
         if (codBuscado != -2) {
             //busca indexada: vai direto ao RRN pelo indice
@@ -245,7 +249,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                     fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                     Registry reg;
                     if (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
-                        if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, campos, m)) {
+                        if (reg.removido == IS_NOT_REMOVED && isTheRegistryCorrespondent(&reg, campos, m)) {
                             int cod = reg.codEstacao;
                             freeRegistry(&reg); //libera antes de reposicionar o cursor
 
@@ -259,7 +263,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                             fwrite(&cab.topo,      sizeof(int),  1, registryBinaryFile);
                             cab.topo = rrn; //esse RRN e o novo topo da pilha
 
-                            removerDoIndice(primaryIndexArchive, cod);
+                            removeByIndex(primaryIndexArchive, cod);
                         } else {
                             freeRegistry(&reg);
                         }
@@ -276,7 +280,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                 if (binaryToRegistry(&reg, registryBinaryFile) != BINARY_TO_REGISTRY_SUCESS)
                     break;
 
-                if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, campos, m)) {
+                if (reg.removido == IS_NOT_REMOVED && isTheRegistryCorrespondent(&reg, campos, m)) {
                     int cod = reg.codEstacao;
                     freeRegistry(&reg);
 
@@ -291,7 +295,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                     //para deixar o cursor no inicio do proximo registro
                     fseek(registryBinaryFile, REGISTRY_SIZE - sizeof(char) - sizeof(int), SEEK_CUR);
 
-                    removerDoIndice(primaryIndexArchive, cod);
+                    removeByIndex(primaryIndexArchive, cod);
                 } else {
                     freeRegistry(&reg);
                     //binaryToRegistry ja deixou o cursor no inicio do proximo registro
@@ -304,7 +308,7 @@ int removeIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
     //calcula quantos unicos existem agora e aplica a diferenca nos contadores do cabecalho
     {
         int estDepois, paresDepois;
-        contarUnicosValidos(registryBinaryFile, &estDepois, &paresDepois);
+        countValidRecords(registryBinaryFile, &estDepois, &paresDepois);
         cab.nroEstacoes     += estDepois   - estAntes;
         cab.nroParesEstacao += paresDepois - paresAntes;
     }
@@ -347,15 +351,15 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
 
     //le o cabecalho para saber o topo da pilha e o proximo RRN disponivel
     Header cab;
-    lerCabecalho(registryBinaryFile, &cab);
+    readHeader(registryBinaryFile, &cab);
 
     //snapshot dos contadores antes das insercoes para calcular o delta ao final
     int estAntes, paresAntes;
-    contarUnicosValidos(registryBinaryFile, &estAntes, &paresAntes);
+    countValidRecords(registryBinaryFile, &estAntes, &paresAntes);
 
     for (int i = 0; i < numberOfRegistries; i++) {
         Registry reg;
-        lerRegistroStdin(&reg); //le os 8 campos do novo registro do stdin
+        readRegistryStdin(&reg); //le os 8 campos do novo registro do stdin
 
         int rrnNovo;
 
@@ -383,7 +387,7 @@ int insertNewIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, i
         registryToBinary(&reg, registryBinaryFile);
 
         //insere o par (codEstacao, rrnNovo) no indice mantendo a ordem crescente
-        inserirNoIndice(primaryIndexArchive, codEstacaoNovo, rrnNovo);
+        insertOnIndex(primaryIndexArchive, codEstacaoNovo, rrnNovo);
     }
 
     //calcula o delta de unicos e aplica nos contadores do cabecalho
@@ -431,7 +435,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
     //le o cabecalho para acessar proxRRN (total de slots ocupados no arquivo)
     Header cab;
-    lerCabecalho(registryBinaryFile, &cab);
+    readHeader(registryBinaryFile, &cab);
 
     //snapshot dos contadores antes das atualizacoes para calcular o delta ao final
     int estAntes, paresAntes;
@@ -456,7 +460,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
             ScanQuoteString(camposAtu[j].valueOfTheField);
         }
 
-        int codBuscado = obterCodEstacaoBusca(camposBusca, m);
+        int codBuscado = getCodEstacaoForSearch(camposBusca, m);
 
         if (codBuscado != -2) {
             //busca indexada: localiza o RRN pelo indice e vai direto ao slot
@@ -474,11 +478,11 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                 fseek(registryBinaryFile, HEADER_SIZE + (long)rrn * REGISTRY_SIZE, SEEK_SET);
                 Registry reg;
                 if (binaryToRegistry(&reg, registryBinaryFile) == BINARY_TO_REGISTRY_SUCESS) {
-                    if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, camposBusca, m)) {
+                    if (reg.removido == IS_NOT_REMOVED && isTheRegistryCorrespondent(&reg, camposBusca, m)) {
                         int codAntigo = reg.codEstacao;
 
                         //aplica as alteracoes sobre o registro que esta em memoria
-                        aplicarAtualizacoes(&reg, camposAtu, p);
+                        updateRecords(&reg, camposAtu, p);
 
                         int codNovo = reg.codEstacao;
 
@@ -490,7 +494,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                         //e insere a nova com o mesmo RRN mas o novo codigo
                         if (codNovo != codAntigo) {
                             removerDoIndice(primaryIndexArchive, codAntigo);
-                            inserirNoIndice(primaryIndexArchive, codNovo, rrn);
+                            insertOnIndex(primaryIndexArchive, codNovo, rrn);
                         }
                     } else {
                         freeRegistry(&reg);
@@ -506,10 +510,10 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
                 if (binaryToRegistry(&reg, registryBinaryFile) != BINARY_TO_REGISTRY_SUCESS)
                     break;
 
-                if (reg.removido == IS_NOT_REMOVED && registroCorresponde(&reg, camposBusca, m)) {
+                if (reg.removido == IS_NOT_REMOVED && isTheRegistryCorrespondent(&reg, camposBusca, m)) {
                     int codAntigo = reg.codEstacao;
 
-                    aplicarAtualizacoes(&reg, camposAtu, p);
+                    updateRecords(&reg, camposAtu, p);
 
                     int codNovo = reg.codEstacao;
 
@@ -521,7 +525,7 @@ int updateIndexArchive(FILE *registryBinaryFile, FILE *primaryIndexArchive, int 
 
                     if (codNovo != codAntigo) {
                         removerDoIndice(primaryIndexArchive, codAntigo);
-                        inserirNoIndice(primaryIndexArchive, codNovo, rrn);
+                        insertOnIndex(primaryIndexArchive, codNovo, rrn);
                     }
                 } else {
                     freeRegistry(&reg);
