@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<string.h>
 
 #include "header.h"
 
@@ -40,4 +41,12 @@ Vertex createVertex(Registry *registryFromBinaryFile)
 
 
     return vertex;
+}
+
+int compareVertexNameForQsort(const void *a, const void *b)
+{
+    const Vertex *valueA = (Vertex *)a;
+    const Vertex *valueB = (Vertex *)b;
+
+    return (strcmp(valueA->stationName, valueB->stationName));
 }

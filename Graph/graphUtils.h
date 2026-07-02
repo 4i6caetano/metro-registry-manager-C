@@ -11,4 +11,6 @@ AdjacencyList createAdjacencyList(FILE* binaryMetroFile);
 
 Vertex createVertex(Registry* registryFromBinaryFile);
 
+int compareVertexNameForQsort(const void *a, const void *b);
+
 #endif
