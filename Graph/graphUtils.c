@@ -32,8 +32,12 @@ Vertex createVertex(Registry *registryFromBinaryFile)
     Vertex vertex;
     int nameSize = registryFromBinaryFile->tamNomeEstacao;
 
-    vertex.stationName = (char*) malloc(sizeof(char) * nameSize + 1);
+    vertex.stationName = (char*) malloc(sizeof(char) * (nameSize + 1));
+
     strcpy(vertex.stationName, registryFromBinaryFile->nomeEstacao);
+
+    vertex.nextStation = NULL;
+
 
     return vertex;
 }

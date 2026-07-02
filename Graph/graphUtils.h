@@ -5,6 +5,7 @@
 
 #include "graph.h"
 #include "header.h"
+#include "registry.h"
 
 AdjacencyList createAdjacencyList(FILE* binaryMetroFile);
 

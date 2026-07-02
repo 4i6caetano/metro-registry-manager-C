@@ -3,6 +3,9 @@
 #include "graph.h"
 #include "functionsGraph.h"
 
+#include "registry.h"
+#include "header.h"
+
 /*
 A representação do grafo deve ser, obrigatoriamente, na forma de listas de
 adjacências. As listas de adjacências consistem tradicionalmente em um vetor de |V|
@@ -23,9 +26,35 @@ int createGraphFromMetro(FILE* binaryMetroFile)
   // ler o header e descobrir quantas estacoes unicas tem. cada estacao sera um vertice.
   // alocar a Adjacencia com esse tamanho
 
+  // Depois, temos que ler o arquivo binário e ir colocando os vertices e arestas.
+  // -> Começamos por percorrer o binário e colocar todos os vértices
+
+  if(!binaryMetroFile)
+  {
+    printf("Falha no processamento do arquivo.\n");
+    return CREATEGRAPH_FAILURE;
+  }
+
   AdjacencyList adjacencyList; // we start our graph in the form of an adjencyList
   adjacencyList = createAdjacencyList(binaryMetroFile); // We alocate the memory and stations needed on the list
 
+  Vertex vertex;
+
+  Registry registryFromBinaryFile;
+
+  int index = 0;
+  while(binaryToRegistry(&registryFromBinaryFile, binaryMetroFile) == BINARY_TO_REGISTRY_SUCESS)
+  {
+    if(registryFromBinaryFile.removido == IS_NOT_REMOVED)
+    {
+        vertex = createVertex(&registryFromBinaryFile);
+        adjacencyList.listOfVertices[index] = vertex;
+
+        index++;
+    }
+  }
+
+  return CREATEGRAPH_SUCESS;
 }
 
 int calculateLowestDistanceFromStations(FILE* binaryMetroFile, char* originStationName, char* valueOriginStation, char* destinyStationName, char* value)
