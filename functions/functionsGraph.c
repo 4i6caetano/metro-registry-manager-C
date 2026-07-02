@@ -19,25 +19,30 @@ armazenar: (i) o nome da próxima estação; (ii) a distância para a próxima e
 
 int createGraphFromMetro(FILE* binaryMetroFile)
 {
-  // criar a lista de adjacencia
-  // Ou seja, iniciar a lista
-  // criar os vértices
-  //criar as conexões
-  // Ir preenchendo ela com cada vertice (estacao que temos)
-  // preencher cada conexão do vertice com as informações
+  // ler o header e descobrir quantas estacoes unicas tem. cada estacao sera um vertice.
+  // alocar a Adjacencia com esse tamanho
 }
 
 int calculateLowestDistanceFromStations(FILE* binaryMetroFile, char* originStationName, char* valueOriginStation, char* destinyStationName, char* value)
 {
-
+    ;
 }
 
 int optmizeRailingSystem(FILE* binaryMetroFile, char* nameStation, char* originValue)
 {
-    
+    ;
 }
 
 int countCyclesBetweenStations(FILE* binaryMetroFile, char* nameStation, char* stationValue)
 {
-
+    ;
 }
+
+/*
+    feat: adiciona struct Vertex
+    fix: corrige leitura
+    refactor: extrai busca da funcao propria
+    docs: documentacao
+    test: testes
+    chore: manutencao, build, config
+*/
