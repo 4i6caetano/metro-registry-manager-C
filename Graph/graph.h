@@ -1,3 +1,6 @@
+#ifndef GRAPH_H
+#define GRAPH_H
+
 typedef struct vertex Vertex;
 typedef struct connection Connection;
 
@@ -28,3 +31,5 @@ typedef struct adjacencyList
 } AdjacencyList;
 
 #include "graphUtils.h"
+
+#endif

@@ -1,8 +1,13 @@
+#ifndef GRAPHUTILS_H
+#define GRAPHUTILS_H
+
 #include<stdio.h>
 
 #include "graph.h"
 #include "header.h"
 
-AdjecencyList createAdjacencyList(FILE* binaryMetroFile);
+AdjacencyList createAdjacencyList(FILE* binaryMetroFile);
 
-Vertex createVertex(FILE* binaryMetroFile);
+Vertex createVertex(Registry* registryFromBinaryFile);
+
+#endif

@@ -4,6 +4,7 @@
 
 #include "graph.h"
 #include "graphUtils.h"
+#include "registry.h"
 
 AdjacencyList createAdjacencyList(FILE* binaryMetroFile)
 {
@@ -24,4 +25,15 @@ AdjacencyList createAdjacencyList(FILE* binaryMetroFile)
     adjacencyList.numberOfVertices = numberOfUniqueStations;
 
     return adjacencyList;
+}
+
+Vertex createVertex(Registry *registryFromBinaryFile)
+{
+    Vertex vertex;
+    int nameSize = registryFromBinaryFile->tamNomeEstacao;
+
+    vertex.stationName = (char*) malloc(sizeof(char) * nameSize + 1);
+    strcpy(vertex.stationName, registryFromBinaryFile->nomeEstacao);
+
+    return vertex;
 }
