@@ -26,3 +26,5 @@ typedef struct adjacencyList
     int numberOfVertices;
 
 } AdjacencyList;
+
+#include "graphUtils.h"

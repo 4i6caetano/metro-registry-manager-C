@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "graph.h"
 #include "functionsGraph.h"
 
 /*
@@ -21,6 +22,10 @@ int createGraphFromMetro(FILE* binaryMetroFile)
 {
   // ler o header e descobrir quantas estacoes unicas tem. cada estacao sera um vertice.
   // alocar a Adjacencia com esse tamanho
+
+  AdjacencyList adjacencyList; // we start our graph in the form of an adjencyList
+  adjacencyList = createAdjacencyList(binaryMetroFile); // We alocate the memory and stations needed on the list
+
 }
 
 int calculateLowestDistanceFromStations(FILE* binaryMetroFile, char* originStationName, char* valueOriginStation, char* destinyStationName, char* value)
