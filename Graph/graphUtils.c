@@ -114,9 +114,34 @@ int compareVertexNameForQsort(const void *a, const void *b)
     return (strcmp(valueA->stationName, valueB->stationName));
 }
 
-int binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched)
+Vertex* binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched)
 {
-    
+    int start = 0;
+    int end = numberOfVertices - 1;
+
+    while (start <= end)
+    {
+        int middle = start + (end - start) / 2;
+
+        // Se encontramos o código da estação no índice
+        if (strcmp(adjacencyList->listOfVertices[middle].stationName, nameToBeSearched) == 0) //equal
+        {
+            return &adjacencyList->listOfVertices[middle]; // retornar o vertice
+        }
+
+        // Se o código procurado for maior, descarta a metade esquerda
+        if (strcmp(adjacencyList->listOfVertices[middle].stationName, nameToBeSearched) < 0)
+        {
+            start = middle + 1;
+        }
+        // Se o código procurado for menor, descarta a metade direita
+        else
+        {
+            end = middle - 1;
+        }
+    }
+
+    return NULL;
 }
 
 
