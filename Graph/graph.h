@@ -11,11 +11,22 @@ typedef struct vertex
 
 } Vertex;
 
+/**
+ *   char* nameOfNextStation;
+ *   int distanceOfNextStation;
+ *   char** lines;
+ *
+ *  Vertex* nextVertex;
+ *  Connection* nextConnection;
+ */
 typedef struct connection
 {
     char* nameOfNextStation;
+
     int distanceOfNextStation;
+
     char** lines;
+    int numberOfLines;
 
     Vertex* nextVertex;
     Connection* nextConnection;

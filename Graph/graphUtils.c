@@ -43,6 +43,44 @@ Vertex createVertex(Registry *registryFromBinaryFile)
     return vertex;
 }
 
+Connection createConnection(Registry* registryFromBinaryFile)
+{
+
+}
+
+void insertOnVertex(Vertex* targetVertex, Connection usedConnection)
+{
+
+}
+
+/*
+    char* nameOfNextStation;
+    int distanceOfNextStation;
+    char** lines;
+
+    Vertex* nextVertex;
+    Connection* nextConnection;*/
+Connection createConnection(Registry* registryFromBinaryFile)
+{
+    Connection connection;
+    connection.numberOfLines = 0;
+
+    connection.nameOfNextStation = (char*) malloc(sizeof(char) * registryFromBinaryFile->tamNomeEstacao + 1);
+    strcpy(connection.nameOfNextStation, registryFromBinaryFile->nomeEstacao);
+
+    connection.distanceOfNextStation = registryFromBinaryFile->distProxEstacao;
+
+    connection.lines = (char**) malloc(sizeof(char*));
+    connection.lines[0] = (char*) malloc(sizeof(char) * registryFromBinaryFile ->tamNomeLinha + 1);
+    strcpy(connection.lines[0], registryFromBinaryFile->nomeLinha);
+    connection.numberOfLines++;
+
+    connection.nextVertex = NULL;
+    connection.nextConnection = NULL;
+
+    return connection;
+}
+
 int compareVertexNameForQsort(const void *a, const void *b)
 {
     const Vertex *valueA = (Vertex *)a;
@@ -50,3 +88,8 @@ int compareVertexNameForQsort(const void *a, const void *b)
 
     return (strcmp(valueA->stationName, valueB->stationName));
 }
+
+
+/* Criar a conexao */
+/* Inserir no vértice */
+/* Inserir se ja tiver conexão */
