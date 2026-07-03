@@ -21,7 +21,7 @@ typedef struct vertex
  */
 typedef struct connection
 {
-    char* nameOfNextStation;
+    char* connectionName; // from Estacao
 
     int distanceOfNextStation;
 
@@ -44,3 +44,4 @@ typedef struct adjacencyList
 #include "graphUtils.h"
 
 #endif
+;

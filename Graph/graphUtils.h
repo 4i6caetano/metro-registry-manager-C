@@ -15,4 +15,6 @@ Connection createConnection(Registry* registryFromBinaryFile);
 
 int compareVertexNameForQsort(const void *a, const void *b);
 
+int binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched);
+
 #endif

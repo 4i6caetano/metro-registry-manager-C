@@ -43,14 +43,39 @@ Vertex createVertex(Registry *registryFromBinaryFile)
     return vertex;
 }
 
-Connection createConnection(Registry* registryFromBinaryFile)
+void insertConnectionOnVertex(Vertex* vertex, Connection* connection)
 {
+    if(vertex -> nextStation == NULL)
+    {
+        vertex->nextStation = connection;
+        return;
+    }
 
-}
+    Connection* previous = NULL;
+    Connection* current = vertex->nextStation;
 
-void insertOnVertex(Vertex* targetVertex, Connection usedConnection)
-{
+    while(current != NULL && strcmp(current->connectionName, connection->connectionName) < 0)
+    {
 
+        previous = current;
+        current = current->nextConnection;
+
+    }
+
+    connection->nextConnection = current;
+
+    if(previous ==  NULL)
+    {
+        vertex->nextStation = connection;
+    }
+
+    else
+    {
+        previous->nextConnection = connection;
+    }
+
+    //Caso não seja a primeira aresta, e sim da segunda pra frente, percorrer elas.
+    
 }
 
 /*
@@ -65,8 +90,8 @@ Connection createConnection(Registry* registryFromBinaryFile)
     Connection connection;
     connection.numberOfLines = 0;
 
-    connection.nameOfNextStation = (char*) malloc(sizeof(char) * registryFromBinaryFile->tamNomeEstacao + 1);
-    strcpy(connection.nameOfNextStation, registryFromBinaryFile->nomeEstacao);
+    connection.connectionName = (char*) malloc(sizeof(char) * registryFromBinaryFile->tamNomeEstacao + 1);
+    strcpy(connection.connectionName, registryFromBinaryFile->nomeEstacao);
 
     connection.distanceOfNextStation = registryFromBinaryFile->distProxEstacao;
 
@@ -87,6 +112,11 @@ int compareVertexNameForQsort(const void *a, const void *b)
     const Vertex *valueB = (Vertex *)b;
 
     return (strcmp(valueA->stationName, valueB->stationName));
+}
+
+int binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched)
+{
+    
 }
 
 
