@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "graph.h"
+
 #define CREATEGRAPH_SUCESS 1
 #define CREATEGRAPH_FAILURE 0
 

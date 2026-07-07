@@ -11,10 +11,12 @@ AdjacencyList createAdjacencyList(FILE* binaryMetroFile);
 
 Vertex createVertex(Registry* registryFromBinaryFile);
 
-Connection createConnection(Registry* registryFromBinaryFile);
+Connection* createConnection(Registry* registryFromBinaryFile);
 
 int compareVertexNameForQsort(const void *a, const void *b);
 
-int binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched);
+void addLineToConnection(Connection* connection, char* newLineName);
+
+Vertex* binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched);
 
 #endif

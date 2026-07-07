@@ -85,7 +85,7 @@ void insertConnectionOnVertex(Vertex* vertex, Connection* connection)
 
     Vertex* nextVertex;
     Connection* nextConnection;*/
-Connection createConnection(Registry* registryFromBinaryFile)
+Connection* createConnection(Registry* registryFromBinaryFile)
 {
     Connection connection;
     connection.numberOfLines = 0;
@@ -103,7 +103,7 @@ Connection createConnection(Registry* registryFromBinaryFile)
     connection.nextVertex = NULL;
     connection.nextConnection = NULL;
 
-    return connection;
+    return &connection;
 }
 
 int compareVertexNameForQsort(const void *a, const void *b)
@@ -112,6 +112,16 @@ int compareVertexNameForQsort(const void *a, const void *b)
     const Vertex *valueB = (Vertex *)b;
 
     return (strcmp(valueA->stationName, valueB->stationName));
+}
+
+void addLineToConnection(Connection* connection, char* newLineName)
+{
+    connection->numberOfLines++;
+
+    connection->lines = (char**) realloc(connection->lines, sizeof(char*) * connection->numberOfLines);
+
+    connection->lines[connection->numberOfLines - 1] = (char*) malloc(strlen(newLineName) + 1);
+    strcpy(connection->lines[connection->numberOfLines - 1], newLineName);
 }
 
 Vertex* binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched)
