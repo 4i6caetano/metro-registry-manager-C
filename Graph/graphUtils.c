@@ -1,153 +1,139 @@
-#include<stdio.h>
-#include<string.h>
-
-#include "header.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "graph.h"
 #include "graphUtils.h"
 #include "registry.h"
 
-AdjacencyList createAdjacencyList(FILE* binaryMetroFile)
+
+Vertex createVertex(Registry *reg)
 {
-    // pegar o numero de estacoes unicas que existem no arquivo.
-    // isso esta no header. temos que ler 
-
-    Header header;
-    readHeader(binaryMetroFile, &header);
-
-    Vertex firstVertex;
-
-    AdjacencyList adjacencyList;
-
-    int numberOfUniqueStations = header.nroEstacoes;
-
-    // this way, we initiate the structure of our graph.
-    adjacencyList.listOfVertices = (Vertex*) malloc(sizeof(Vertex) * numberOfUniqueStations);
-    adjacencyList.numberOfVertices = numberOfUniqueStations;
-
-    return adjacencyList;
+    Vertex v;
+    v.stationName = (char *) malloc(reg->tamNomeEstacao + 1);
+    strcpy(v.stationName, reg->nomeEstacao);
+    v.nextStation = NULL;
+    return v;
 }
 
-Vertex createVertex(Registry *registryFromBinaryFile)
+Connection *createConnection(const char *destName, int dist, const char *lineName)
 {
-    Vertex vertex;
-    int nameSize = registryFromBinaryFile->tamNomeEstacao;
+    Connection *c = (Connection *) malloc(sizeof(Connection));
 
-    vertex.stationName = (char*) malloc(sizeof(char) * (nameSize + 1));
+    c->connectionName        = (char *) malloc(strlen(destName) + 1);
+    strcpy(c->connectionName, destName);
 
-    strcpy(vertex.stationName, registryFromBinaryFile->nomeEstacao);
+    c->distanceOfNextStation = dist;
+    c->numberOfLines         = 1;
+    c->lines                 = (char **) malloc(sizeof(char *));
+    c->lines[0]              = (char *) malloc(strlen(lineName) + 1);
+    strcpy(c->lines[0], lineName);
 
-    vertex.nextStation = NULL;
-
-
-    return vertex;
+    c->nextConnection = NULL;
+    return c;
 }
 
-void insertConnectionOnVertex(Vertex* vertex, Connection* connection)
+void addLineToConnection(Connection *c, const char *lineName)
 {
-    if(vertex -> nextStation == NULL)
+    for (int i = 0; i < c->numberOfLines; i++)
+        if (strcmp(c->lines[i], lineName) == 0) return; //evita duplicatas
+
+    c->numberOfLines++;
+    c->lines = (char **) realloc(c->lines, sizeof(char *) * c->numberOfLines);
+    c->lines[c->numberOfLines - 1] = (char *) malloc(strlen(lineName) + 1);
+    strcpy(c->lines[c->numberOfLines - 1], lineName);
+
+    /* keep lines sorted ascending */
+    for (int i = c->numberOfLines - 1; i > 0; i--)
     {
-        vertex->nextStation = connection;
-        return;
+        if (strcmp(c->lines[i], c->lines[i - 1]) < 0)
+        {
+            char *tmp        = c->lines[i];
+            c->lines[i]     = c->lines[i - 1];
+            c->lines[i - 1] = tmp;
+        }
+        else break;
     }
-
-    Connection* previous = NULL;
-    Connection* current = vertex->nextStation;
-
-    while(current != NULL && strcmp(current->connectionName, connection->connectionName) < 0)
-    {
-
-        previous = current;
-        current = current->nextConnection;
-
-    }
-
-    connection->nextConnection = current;
-
-    if(previous ==  NULL)
-    {
-        vertex->nextStation = connection;
-    }
-
-    else
-    {
-        previous->nextConnection = connection;
-    }
-
-    //Caso não seja a primeira aresta, e sim da segunda pra frente, percorrer elas.
-    
 }
 
-Connection* createConnection(Registry* registryFromBinaryFile)
+void insertConnectionOnVertex(Vertex *vertex, Connection *conn)
 {
-    Connection* connection = (Connection*) malloc(sizeof(Connection));
-    connection->numberOfLines = 0;
+    Connection *prev = NULL;
+    Connection *cur  = vertex->nextStation;
 
-    connection->connectionName = (char*) malloc(sizeof(char) * registryFromBinaryFile->tamNomeEstacao + 1);
-    strcpy(connection->connectionName, registryFromBinaryFile->nomeEstacao);
+    while (cur != NULL)
+    {
+        int cmp = strcmp(cur->connectionName, conn->connectionName);
+        if (cmp > 0) break;                      /* insert before cur */
+        if (cmp == 0)
+        {
+            /* same destination: tie-break on first line name */
+            if (strcmp(cur->lines[0], conn->lines[0]) > 0) break;
+        }
+        prev = cur;
+        cur  = cur->nextConnection;
+    }
 
-    connection->distanceOfNextStation = registryFromBinaryFile->distProxEstacao;
-
-    connection->lines = (char**) malloc(sizeof(char*));
-    connection->lines[0] = (char*) malloc(sizeof(char) * registryFromBinaryFile ->tamNomeLinha + 1);
-    strcpy(connection->lines[0], registryFromBinaryFile->nomeLinha);
-    connection->numberOfLines++;
-
-    connection->nextVertex = NULL;
-    connection->nextConnection = NULL;
-
-    return connection;
+    conn->nextConnection = cur;
+    if (prev == NULL) vertex->nextStation   = conn;
+    else              prev->nextConnection  = conn;
 }
 
 int compareVertexNameForQsort(const void *a, const void *b)
 {
-    const Vertex *valueA = (Vertex *)a;
-    const Vertex *valueB = (Vertex *)b;
-
-    return (strcmp(valueA->stationName, valueB->stationName));
+    return strcmp(((const Vertex *) a)->stationName,
+                  ((const Vertex *) b)->stationName);
 }
 
-void addLineToConnection(Connection* connection, char* newLineName)
+Vertex *binarySearchOnGraph(AdjacencyList *list, int n, const char *name)
 {
-    connection->numberOfLines++;
-
-    connection->lines = (char**) realloc(connection->lines, sizeof(char*) * connection->numberOfLines);
-
-    connection->lines[connection->numberOfLines - 1] = (char*) malloc(strlen(newLineName) + 1);
-    strcpy(connection->lines[connection->numberOfLines - 1], newLineName);
-}
-
-Vertex* binarySearchOnGraph(AdjacencyList* adjacencyList, int numberOfVertices, char *nameToBeSearched)
-{
-    int start = 0;
-    int end = numberOfVertices - 1;
-
-    while (start <= end)
+    int lo = 0, hi = n - 1;
+    while (lo <= hi)
     {
-        int middle = start + (end - start) / 2;
-
-        // Se encontramos o código da estação no índice
-        if (strcmp(adjacencyList->listOfVertices[middle].stationName, nameToBeSearched) == 0) //equal
-        {
-            return &adjacencyList->listOfVertices[middle]; // retornar o vertice
-        }
-
-        // Se o código procurado for maior, descarta a metade esquerda
-        if (strcmp(adjacencyList->listOfVertices[middle].stationName, nameToBeSearched) < 0)
-        {
-            start = middle + 1;
-        }
-        // Se o código procurado for menor, descarta a metade direita
-        else
-        {
-            end = middle - 1;
-        }
+        int mid = lo + (hi - lo) / 2;
+        int cmp = strcmp(list->listOfVertices[mid].stationName, name);
+        if (cmp == 0) return &list->listOfVertices[mid];
+        if (cmp  < 0) lo = mid + 1;
+        else          hi = mid - 1;
     }
-
     return NULL;
 }
 
+void printAdjacencyList(AdjacencyList *list)
+{
+    for (int i = 0; i < list->numberOfVertices; i++)
+    {
+        Vertex *v = &list->listOfVertices[i];
+        printf("%s", v->stationName);
 
-/* Criar a conexao */
-/* Inserir no vértice */
-/* Inserir se ja tiver conexão */
+        Connection *c = v->nextStation;
+        while (c != NULL)
+        {
+            printf(", %s, %d", c->connectionName, c->distanceOfNextStation);
+            for (int l = 0; l < c->numberOfLines; l++)
+                printf(", %s", c->lines[l]);
+            c = c->nextConnection;
+        }
+        printf("\n");
+    }
+}
+
+void freeAdjacencyList(AdjacencyList *list)
+{
+    for (int i = 0; i < list->numberOfVertices; i++)
+    {
+        free(list->listOfVertices[i].stationName);
+
+        Connection *c = list->listOfVertices[i].nextStation;
+        while (c != NULL)
+        {
+            Connection *next = c->nextConnection;
+            free(c->connectionName);
+            for (int l = 0; l < c->numberOfLines; l++) free(c->lines[l]);
+            free(c->lines);
+            free(c);
+            c = next;
+        }
+    }
+    free(list->listOfVertices);
+}
