@@ -288,26 +288,6 @@ void readRegistryStdin(Registry *reg)
     reg->proximo  = -1;
 }
 
-void readHeader(FILE *arq, Header *cab)
-{
-    fseek(arq, 0, SEEK_SET);
-    fread(&cab->status,          sizeof(char), 1, arq);
-    fread(&cab->topo,            sizeof(int),  1, arq);
-    fread(&cab->proxRRN,         sizeof(int),  1, arq);
-    fread(&cab->nroEstacoes,     sizeof(int),  1, arq);
-    fread(&cab->nroParesEstacao, sizeof(int),  1, arq);
-}
-
-void writeHeader(FILE *arq, Header *cab)
-{
-    fseek(arq, 0, SEEK_SET);
-    fwrite(&cab->status,          sizeof(char), 1, arq);
-    fwrite(&cab->topo,            sizeof(int),  1, arq);
-    fwrite(&cab->proxRRN,         sizeof(int),  1, arq);
-    fwrite(&cab->nroEstacoes,     sizeof(int),  1, arq);
-    fwrite(&cab->nroParesEstacao, sizeof(int),  1, arq);
-}
-
 //carrega o indice inteiro em RAM, busca o codEstacao via binaria e libera o array
 //centraliza o padrao repetido nas funcionalidades 6, 7 e 9
 int localizarRRNViaIndice(FILE *primaryIndexArchive, int codEstacao)

@@ -116,30 +116,6 @@ int isTheRegistryCorrespondent(Registry *reg, Field *campos, int m);
 void readRegistryStdin(Registry *reg);
 
 /**
- * @brief Loads control data from the file into a header structure in memory.
- *
- * @details This function sets the read cursor to the absolute beginning of the file 
- * (byte 0) and sequentially extracts the consistency status and all system counters 
- * (such as the top of the removed records stack and the next RRN).
- *
- * @param arq Pointer to the binary file (must be open for reading).
- * @param cab Pointer to the structure where the header data will be stored.
- */
-void readHeader(FILE *arq, Header *cab);
-
-/**
- * @brief Saves the updated header structure data back to the disk.
- *
- * @details This routine ensures that state information and record counters remain 
- * persistent. It returns the cursor to byte zero of the file and sequentially writes 
- * the current status and the essential control variables for database integrity.
- *
- * @param arq Pointer to the binary file (must be open for writing).
- * @param cab Pointer to the structure containing the header data to be written.
- */
-void writeHeader(FILE *arq, Header *cab);
-
-/**
  * @brief Locates the RRN of a record through a binary search on the index file.
  *
  * @details Encapsulates the pattern repeated across functionalities [6], [7] and [9]:
