@@ -13,6 +13,8 @@ Vertex createVertex(Registry* registryFromBinaryFile);
 
 Connection* createConnection(Registry* registryFromBinaryFile);
 
+void insertConnectionOnVertex(Vertex* vertex, Connection* connection);
+
 int compareVertexNameForQsort(const void *a, const void *b);
 
 void addLineToConnection(Connection* connection, char* newLineName);

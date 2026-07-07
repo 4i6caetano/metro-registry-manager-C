@@ -78,32 +78,25 @@ void insertConnectionOnVertex(Vertex* vertex, Connection* connection)
     
 }
 
-/*
-    char* nameOfNextStation;
-    int distanceOfNextStation;
-    char** lines;
-
-    Vertex* nextVertex;
-    Connection* nextConnection;*/
 Connection* createConnection(Registry* registryFromBinaryFile)
 {
-    Connection connection;
-    connection.numberOfLines = 0;
+    Connection* connection = (Connection*) malloc(sizeof(Connection));
+    connection->numberOfLines = 0;
 
-    connection.connectionName = (char*) malloc(sizeof(char) * registryFromBinaryFile->tamNomeEstacao + 1);
-    strcpy(connection.connectionName, registryFromBinaryFile->nomeEstacao);
+    connection->connectionName = (char*) malloc(sizeof(char) * registryFromBinaryFile->tamNomeEstacao + 1);
+    strcpy(connection->connectionName, registryFromBinaryFile->nomeEstacao);
 
-    connection.distanceOfNextStation = registryFromBinaryFile->distProxEstacao;
+    connection->distanceOfNextStation = registryFromBinaryFile->distProxEstacao;
 
-    connection.lines = (char**) malloc(sizeof(char*));
-    connection.lines[0] = (char*) malloc(sizeof(char) * registryFromBinaryFile ->tamNomeLinha + 1);
-    strcpy(connection.lines[0], registryFromBinaryFile->nomeLinha);
-    connection.numberOfLines++;
+    connection->lines = (char**) malloc(sizeof(char*));
+    connection->lines[0] = (char*) malloc(sizeof(char) * registryFromBinaryFile ->tamNomeLinha + 1);
+    strcpy(connection->lines[0], registryFromBinaryFile->nomeLinha);
+    connection->numberOfLines++;
 
-    connection.nextVertex = NULL;
-    connection.nextConnection = NULL;
+    connection->nextVertex = NULL;
+    connection->nextConnection = NULL;
 
-    return &connection;
+    return connection;
 }
 
 int compareVertexNameForQsort(const void *a, const void *b)
