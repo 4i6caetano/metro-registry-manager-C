@@ -8,6 +8,7 @@
 #include "functions.h"
 #include "functionsIndex.h"
 #include "index.h"
+#include "functionsGraph.h"
 
 /**
  * Developers:
@@ -30,6 +31,10 @@ typedef enum function
   REMOVE_INDEX_ARCHIVE,        /**< chama removeIndexArchive(). '7'. */
   INSERT_NEW_INDEX_ARCHIVE,        /**< chama insertNewIndexArchive(). '8'. */
   UPDATE_INDEX_ARCHIVE,        /**< chama updateIndexArchive(). '9'. */
+  CREATE_GRAPH,                /**< chama createGraphFromMetro(). '10'. */
+  SHORTEST_PATH,               /**< chama calculateLowestDistanceFromStations(). '11'. */
+  MINIMUM_SPANNING_TREE,       /**< chama optimizeRailingSystem(). '12'. */
+  COUNT_CYCLES,                /**< chama countCyclesBetweenStations(). '13'. */
 } Function;
 
 int main()
@@ -389,6 +394,61 @@ int main()
         fclose(binaryFile);
         fclose(indexBinFile);
       }
+      break;
+    }
+
+    case CREATE_GRAPH:
+    {
+      /* [10] Entrada: arquivoEntrada.bin */
+      scanf("%s", inputFile);
+      FILE *binaryFile = fopen(inputFile, "rb");
+      if (binaryFile == NULL) { printf("Falha na execução da funcionalidade.\n"); break; }
+      createGraphFromMetro(binaryFile);
+      fclose(binaryFile);
+      break;
+    }
+
+    case SHORTEST_PATH:
+    {
+      /* [11] Entrada: arqDados.bin arqIndice.bin nomeCampo "valorOrigem" nomeCampo "valorDest" */
+      char indexFile[100], originField[100], originValue[200], destField[100], destValue[200];
+      scanf("%s %s %s", inputFile, indexFile, originField);
+      ScanQuoteString(originValue);
+      scanf("%s", destField);
+      ScanQuoteString(destValue);
+
+      FILE *binaryFile = fopen(inputFile, "rb");
+      if (binaryFile == NULL) { printf("Falha na execução da funcionalidade.\n"); break; }
+      calculateLowestDistanceFromStations(binaryFile, originField, originValue, destField, destValue);
+      fclose(binaryFile);
+      break;
+    }
+
+    case MINIMUM_SPANNING_TREE:
+    {
+      /* [12] Entrada: arqDados.bin arqIndice.bin nomeCampo "valorOrigem" */
+      char indexFile[100], nameStation[100], originValue[200];
+      scanf("%s %s %s", inputFile, indexFile, nameStation);
+      ScanQuoteString(originValue);
+
+      FILE *binaryFile = fopen(inputFile, "rb");
+      if (binaryFile == NULL) { printf("Falha na execução da funcionalidade.\n"); break; }
+      optimizeRailingSystem(binaryFile, nameStation, originValue);
+      fclose(binaryFile);
+      break;
+    }
+
+    case COUNT_CYCLES:
+    {
+      /* [13] Entrada: arqDados.bin arqIndice.bin nomeCampo "valorOrigem" */
+      char indexFile[100], nameStation[100], stationValue[200];
+      scanf("%s %s %s", inputFile, indexFile, nameStation);
+      ScanQuoteString(stationValue);
+
+      FILE *binaryFile = fopen(inputFile, "rb");
+      if (binaryFile == NULL) { printf("Falha na execução da funcionalidade.\n"); break; }
+      countCyclesBetweenStations(binaryFile, nameStation, stationValue);
+      fclose(binaryFile);
       break;
     }
 
