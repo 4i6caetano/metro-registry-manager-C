@@ -399,8 +399,9 @@ int main()
 
     case CREATE_GRAPH:
     {
-      /* [10] Entrada: arquivoEntrada.bin */
-      scanf("%s", inputFile);
+      /* run.codes manda sempre um segundo arquivo (índice), mesmo sem uso aqui; só descartamos */
+      char indexFile[100];
+      scanf("%s %s", inputFile, indexFile);
       FILE *binaryFile = fopen(inputFile, "rb");
       if (binaryFile == NULL) { printf("Falha na execução da funcionalidade.\n"); break; }
       createGraphFromMetro(binaryFile);
@@ -410,7 +411,7 @@ int main()
 
     case SHORTEST_PATH:
     {
-      /* [11] Entrada: arqDados.bin arqIndice.bin nomeCampo "valorOrigem" nomeCampo "valorDest" */
+      /* entrada: ... nomeEstacaoOrigem "valorOrigem" nomeEstacaoDestino "valorDestino" */
       char indexFile[100], originField[100], originValue[200], destField[100], destValue[200];
       scanf("%s %s %s", inputFile, indexFile, originField);
       ScanQuoteString(originValue);
@@ -426,7 +427,7 @@ int main()
 
     case MINIMUM_SPANNING_TREE:
     {
-      /* [12] Entrada: arqDados.bin arqIndice.bin nomeCampo "valorOrigem" */
+      /* entrada: ... nomeEstacaoOrigem "valorOrigem" */
       char indexFile[100], nameStation[100], originValue[200];
       scanf("%s %s %s", inputFile, indexFile, nameStation);
       ScanQuoteString(originValue);
@@ -440,7 +441,7 @@ int main()
 
     case COUNT_CYCLES:
     {
-      /* [13] Entrada: arqDados.bin arqIndice.bin nomeCampo "valorOrigem" */
+      /* entrada: ... nomeEstacaoOrigem "valorOrigem" */
       char indexFile[100], nameStation[100], stationValue[200];
       scanf("%s %s %s", inputFile, indexFile, nameStation);
       ScanQuoteString(stationValue);

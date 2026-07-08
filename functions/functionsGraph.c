@@ -8,11 +8,6 @@
 #include "registry.h"
 #include "header.h"
 
-/* ------------------------------------------------------------------ */
-/* Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-//checkFileStatus: lê o byte de status do cabeçalho e imprime falha se o arquivo estiver inconsistente
 static int checkFileStatus(FILE *f)
 {
     char status;
@@ -25,11 +20,10 @@ static int checkFileStatus(FILE *f)
     return 1;
 }
 
-//buildGraph: constrói a lista de adjacência completa a partir dos registros do arquivo binário
-//deve ser chamado após checkFileStatus já ter consumido o byte de status
+// monta a lista de adjacência a partir dos registros do arquivo binário
+// (assume que checkFileStatus já consumiu o byte de status)
 static AdjacencyList buildGraph(FILE *f)
 {
-    //calcula quantos registros cabem no arquivo com base no tamanho total
     fseek(f, 0, SEEK_END);
     long fileSize   = ftell(f);
     int  totalSlots = (int)((fileSize - HEADER_SIZE) / REGISTRY_SIZE);
@@ -38,13 +32,11 @@ static AdjacencyList buildGraph(FILE *f)
     Registry *recs = (Registry *) malloc(sizeof(Registry) * totalSlots);
     int n = 0;
     fseek(f, HEADER_SIZE, SEEK_SET);
-    //lê todos os registros do arquivo para a memória de uma vez
     while (n < totalSlots &&
            binaryToRegistry(&recs[n], f) == BINARY_TO_REGISTRY_SUCESS)
         n++;
 
-    //passagem 1: coleta os nomes únicos de estações não removidas e cria os vértices
-    //aloca totalSlots como limite superior para nunca estourar mesmo com nroEstacoes desatualizado
+    // cria um vértice pra cada nome de estação único, ignorando removidos
     AdjacencyList list;
     list.numberOfVertices = totalSlots;
     list.listOfVertices   = (Vertex *) malloc(sizeof(Vertex) * totalSlots);
@@ -57,11 +49,9 @@ static AdjacencyList buildGraph(FILE *f)
 
     for (int i = 0; i < n; i++)
     {
-        //ignora registros removidos ou sem nome
         if (recs[i].removido != IS_NOT_REMOVED) continue;
         if (recs[i].tamNomeEstacao == 0)         continue;
 
-        //verifica se o nome já foi adicionado como vértice para evitar duplicatas
         int dup = 0;
         for (int j = 0; j < vCount; j++)
             if (strcmp(list.listOfVertices[j].stationName, recs[i].nomeEstacao) == 0)
@@ -71,27 +61,24 @@ static AdjacencyList buildGraph(FILE *f)
             list.listOfVertices[vCount++] = createVertex(&recs[i]);
     }
 
-    //ordena os vértices por nome para possibilitar busca binária nas passagens seguintes
+    // ordena por nome pra dar pra usar busca binária depois
     qsort(list.listOfVertices, vCount, sizeof(Vertex), compareVertexNameForQsort);
     list.numberOfVertices = vCount;
     list.listOfVertices   = realloc(list.listOfVertices, sizeof(Vertex) * vCount);
 
-    //passagem 2: adiciona as arestas entre os vértices
     for (int i = 0; i < n; i++)
     {
         Registry *r = &recs[i];
-        //pula registros removidos ou sem nome
         if (r->removido != IS_NOT_REMOVED) continue;
         if (r->tamNomeEstacao == 0)         continue;
 
         Vertex *origin = binarySearchOnGraph(&list, vCount, r->nomeEstacao);
         if (origin == NULL) continue;
 
-        //aresta normal: codEstacao -> codProxEstacao com nome da linha e distância
+        // aresta normal: codEstacao -> codProxEstacao
         if (r->codProxEstacao != -1 && r->nomeLinha != NULL)
         {
             const char *destName = NULL;
-            //busca o registro de destino pelo código e verifica se ele não está removido
             for (int j = 0; j < n; j++)
                 if (recs[j].codEstacao == r->codProxEstacao &&
                     recs[j].tamNomeEstacao > 0 &&
@@ -100,7 +87,6 @@ static AdjacencyList buildGraph(FILE *f)
 
             if (destName != NULL)
             {
-                //se já existe conexão para esse destino, apenas adiciona a linha à conexão
                 Connection *existing = origin->nextStation, *found = NULL;
                 while (existing)
                 {
@@ -120,18 +106,16 @@ static AdjacencyList buildGraph(FILE *f)
             }
         }
 
-        //aresta de integração: codEstacao -> codEstIntegra com distância 0 e linha "Integração"
+        // aresta de integração: distância 0, linha "Integração"
         if (r->codEstIntegra != -1)
         {
             const char *integName = NULL;
-            //busca o registro de integração pelo código e verifica se ele não está removido
             for (int j = 0; j < n; j++)
                 if (recs[j].codEstacao == r->codEstIntegra &&
                     recs[j].tamNomeEstacao > 0 &&
                     recs[j].removido == IS_NOT_REMOVED)
                 { integName = recs[j].nomeEstacao; break; }
 
-            //evita auto-laço e insere apenas uma aresta de integração por par de estações
             if (integName != NULL &&
                 strcmp(integName, r->nomeEstacao) != 0)
             {
@@ -152,13 +136,25 @@ static AdjacencyList buildGraph(FILE *f)
         }
     }
 
+    // estações sem nenhuma conexão de saída não entram na lista final
+    int compactCount = 0;
+    for (int i = 0; i < vCount; i++)
+    {
+        if (list.listOfVertices[i].nextStation != NULL)
+            list.listOfVertices[compactCount++] = list.listOfVertices[i];
+        else
+            free(list.listOfVertices[i].stationName);
+    }
+    vCount = compactCount;
+    list.numberOfVertices = vCount;
+    list.listOfVertices   = realloc(list.listOfVertices, sizeof(Vertex) * vCount);
+
     for (int i = 0; i < n; i++) freeRegistry(&recs[i]);
     free(recs);
 
     return list;
 }
 
-//findIdx: retorna o índice do vértice com o nome dado, ou -1 se não encontrado
 static int findIdx(AdjacencyList *list, const char *name)
 {
     Vertex *v = binarySearchOnGraph(list, list->numberOfVertices, name);
@@ -166,14 +162,8 @@ static int findIdx(AdjacencyList *list, const char *name)
     return (int)(v - list->listOfVertices);
 }
 
-/* ================================================================== */
-/* [10] Build graph and print adjacency list                          */
-/* ================================================================== */
-
-//função 10: constrói o grafo a partir do arquivo binário e imprime a lista de adjacência
 int createGraphFromMetro(FILE *binaryMetroFile)
 {
-    //verifica consistência do arquivo antes de prosseguir
     if (!binaryMetroFile || !checkFileStatus(binaryMetroFile))
         return CREATEGRAPH_FAILURE;
 
@@ -183,12 +173,7 @@ int createGraphFromMetro(FILE *binaryMetroFile)
     return CREATEGRAPH_SUCESS;
 }
 
-/* ================================================================== */
-/* [11] Dijkstra: shortest path between two stations                  */
-/* ================================================================== */
-
-//função 11: calcula o menor caminho entre duas estações usando o algoritmo de dijkstra
-//em caso de empate de distância, desempata pelo menor nome lexicográfico da estação predecessora
+// dijkstra; em empate de distância, desempata pelo nome do predecessor
 int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
                                         const char *originField,
                                         const char *originValue,
@@ -197,7 +182,6 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
 {
     (void)originField; (void)destField;
 
-    //verifica consistência do arquivo antes de prosseguir
     if (!binaryMetroFile || !checkFileStatus(binaryMetroFile))
         return CREATEGRAPH_FAILURE;
 
@@ -206,7 +190,6 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
     int src = findIdx(&list, originValue);
     int dst = findIdx(&list, destValue);
 
-    //verifica se as estações de origem e destino existem no grafo
     if (src == -1 || dst == -1)
     {
         printf("Falha na execução da funcionalidade.\n");
@@ -214,20 +197,15 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
         return CREATEGRAPH_FAILURE;
     }
 
-    //dist: menor distância conhecida até cada vértice
-    //prev: índice do predecessor no caminho mínimo
-    //visited: marca vértices já processados
     int *dist    = (int *) malloc(n * sizeof(int));
     int *prev    = (int *) malloc(n * sizeof(int));
     int *visited = (int *) calloc(n, sizeof(int));
 
-    //inicializa todas as distâncias como infinito e predecessores como inexistentes
     for (int i = 0; i < n; i++) { dist[i] = INT_MAX; prev[i] = -1; }
     dist[src] = 0;
 
     for (int iter = 0; iter < n; iter++)
     {
-        //escolhe o vértice não visitado de menor distância; empate desfeito pelo menor nome
         int u = -1;
         for (int i = 0; i < n; i++)
         {
@@ -242,7 +220,6 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
         visited[u] = 1;
         if (u == dst) break;
 
-        //relaxa todas as arestas saindo de u
         Connection *c = list.listOfVertices[u].nextStation;
         while (c != NULL)
         {
@@ -250,7 +227,6 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
             if (v != -1 && !visited[v])
             {
                 int nd = dist[u] + c->distanceOfNextStation;
-                //atualiza se encontrou caminho mais curto; empate resolvido pelo menor nome do predecessor
                 int update = 0;
                 if (nd < dist[v]) update = 1;
                 else if (nd == dist[v] && prev[v] != -1 &&
@@ -270,13 +246,11 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
     }
     else
     {
-        //reconstrói o caminho percorrendo os predecessores do destino até a origem
         int *path = (int *) malloc(n * sizeof(int));
         int  pLen = 0;
         for (int cur = dst; cur != -1; cur = prev[cur])
             path[pLen++] = cur;
 
-        //inverte o array para ficar na ordem origem -> destino
         for (int i = 0; i < pLen / 2; i++)
         { int t = path[i]; path[i] = path[pLen-1-i]; path[pLen-1-i] = t; }
 
@@ -296,19 +270,12 @@ int calculateLowestDistanceFromStations(FILE *binaryMetroFile,
     return CREATEGRAPH_SUCESS;
 }
 
-/* ================================================================== */
-/* [12] Prim's MST + DFS traversal                                    */
-/* ================================================================== */
-
-//edgeWeight: retorna o menor peso de aresta entre u e v em qualquer direção, INT_MAX se não existir
-//trata o grafo como não dirigido verificando u->v e v->u
 static int edgeWeight(AdjacencyList *list, int u, int v)
 {
     const char *vName = list->listOfVertices[v].stationName;
     const char *uName = list->listOfVertices[u].stationName;
     int w = INT_MAX;
 
-    //verifica aresta u -> v
     Connection *c = list->listOfVertices[u].nextStation;
     while (c)
     {
@@ -317,7 +284,6 @@ static int edgeWeight(AdjacencyList *list, int u, int v)
         c = c->nextConnection;
     }
 
-    //verifica aresta v -> u
     c = list->listOfVertices[v].nextStation;
     while (c)
     {
@@ -329,17 +295,14 @@ static int edgeWeight(AdjacencyList *list, int u, int v)
     return w;
 }
 
-//dfsMST: percorre recursivamente a árvore geradora mínima em profundidade e imprime cada aresta pai->filho
-//os filhos de cada nó são ordenados pelo nome antes de serem visitados
 static void dfsMST(AdjacencyList *list, int *parent, int *key, int n, int u)
 {
-    //coleta todos os filhos do vértice u na árvore geradora
     int *ch  = (int *) malloc(n * sizeof(int));
     int  nCh = 0;
     for (int v = 0; v < n; v++)
         if (parent[v] == u) ch[nCh++] = v;
 
-    //ordena os filhos pelo nome da estação para saída determinística
+    // ordena os filhos pelo nome pra saída ficar determinística
     for (int i = 1; i < nCh; i++)
     {
         int tmp = ch[i], j = i - 1;
@@ -349,7 +312,6 @@ static void dfsMST(AdjacencyList *list, int *parent, int *key, int n, int u)
         ch[j+1] = tmp;
     }
 
-    //imprime a aresta pai->filho e desce recursivamente em cada filho
     for (int i = 0; i < nCh; i++)
     {
         int v = ch[i];
@@ -362,15 +324,13 @@ static void dfsMST(AdjacencyList *list, int *parent, int *key, int n, int u)
     free(ch);
 }
 
-//função 12: calcula a árvore geradora mínima pelo algoritmo de prim e imprime as arestas via dfs
-//em caso de empate de peso, desempata pelo menor nome lexicográfico da estação pai
+// prim + dfs pra imprimir as arestas da mst
 int optimizeRailingSystem(FILE *binaryMetroFile,
                           const char *nameStation,
                           const char *originValue)
 {
     (void)nameStation;
 
-    //verifica consistência do arquivo antes de prosseguir
     if (!binaryMetroFile || !checkFileStatus(binaryMetroFile))
         return CREATEGRAPH_FAILURE;
 
@@ -378,7 +338,6 @@ int optimizeRailingSystem(FILE *binaryMetroFile,
     int n   = list.numberOfVertices;
     int src = findIdx(&list, originValue);
 
-    //verifica se a estação de origem existe no grafo
     if (src == -1)
     {
         printf("Falha na execução da funcionalidade.\n");
@@ -386,20 +345,15 @@ int optimizeRailingSystem(FILE *binaryMetroFile,
         return CREATEGRAPH_FAILURE;
     }
 
-    //key: menor peso de aresta que conecta o vértice à árvore
-    //parent: índice do pai de cada vértice na árvore geradora
-    //inMST: marca vértices já incluídos na árvore
     int *key    = (int *) malloc(n * sizeof(int));
     int *parent = (int *) malloc(n * sizeof(int));
     int *inMST  = (int *) calloc(n, sizeof(int));
 
-    //inicializa as chaves como infinito; a origem entra com chave 0
     for (int i = 0; i < n; i++) { key[i] = INT_MAX; parent[i] = -1; }
     key[src] = 0;
 
     for (int iter = 0; iter < n; iter++)
     {
-        //escolhe o vértice fora da mst com menor chave; empate desfeito pelo menor nome
         int u = -1;
         for (int i = 0; i < n; i++)
         {
@@ -413,14 +367,12 @@ int optimizeRailingSystem(FILE *binaryMetroFile,
         if (u == -1 || key[u] == INT_MAX) break;
         inMST[u] = 1;
 
-        //atualiza a chave dos vizinhos não incluídos na mst
         for (int v = 0; v < n; v++)
         {
             if (inMST[v]) continue;
             int w = edgeWeight(&list, u, v);
             if (w == INT_MAX) continue;
 
-            //atualiza se o peso for menor; empate resolvido pelo menor nome do pai
             int update = 0;
             if (w < key[v]) update = 1;
             else if (w == key[v] && parent[v] != -1 &&
@@ -432,7 +384,6 @@ int optimizeRailingSystem(FILE *binaryMetroFile,
         }
     }
 
-    //percorre a árvore em profundidade a partir da origem para imprimir as arestas
     dfsMST(&list, parent, key, n, src);
 
     free(key); free(parent); free(inMST);
@@ -440,20 +391,14 @@ int optimizeRailingSystem(FILE *binaryMetroFile,
     return CREATEGRAPH_SUCESS;
 }
 
-/* ================================================================== */
-/* [13] Count simple cycles from origin station                       */
-/* ================================================================== */
-
-//CycleCtx: contexto compartilhado entre as chamadas recursivas da dfs de contagem de ciclos
 typedef struct
 {
-    AdjacencyList *list;    //grafo sendo percorrido
-    int           *visited; //controla quais vértices estão no caminho atual
-    int            origin;  //índice da estação de origem (ponto de retorno do ciclo)
-    int            count;   //quantidade de ciclos simples encontrados até agora
+    AdjacencyList *list;
+    int           *visited;
+    int            origin;
+    int            count;
 } CycleCtx;
 
-//dfsCycles: dfs com backtracking que conta quantos caminhos simples retornam à estação de origem
 static void dfsCycles(CycleCtx *ctx, int v)
 {
     Connection *c = ctx->list->listOfVertices[v].nextStation;
@@ -463,27 +408,25 @@ static void dfsCycles(CycleCtx *ctx, int v)
         if (w != -1)
         {
             if (w == ctx->origin)
-                ctx->count++;             //chegou de volta à origem: ciclo simples completo
+                ctx->count++;
             else if (!ctx->visited[w])
             {
                 ctx->visited[w] = 1;
                 dfsCycles(ctx, w);
-                ctx->visited[w] = 0;      //backtrack para explorar outros caminhos
+                ctx->visited[w] = 0;
             }
         }
         c = c->nextConnection;
     }
 }
 
-//função 13: conta todos os ciclos simples que partem e retornam à estação informada
-//imprime -1 se não existirem ciclos, conforme especificação
+// conta os ciclos simples que saem e voltam pra stationValue; imprime -1 se não houver nenhum
 int countCyclesBetweenStations(FILE *binaryMetroFile,
                                const char *nameStation,
                                const char *stationValue)
 {
     (void)nameStation;
 
-    //verifica consistência do arquivo antes de prosseguir
     if (!binaryMetroFile || !checkFileStatus(binaryMetroFile))
         return CREATEGRAPH_FAILURE;
 
@@ -491,7 +434,6 @@ int countCyclesBetweenStations(FILE *binaryMetroFile,
     int n   = list.numberOfVertices;
     int src = findIdx(&list, stationValue);
 
-    //verifica se a estação de origem existe no grafo
     if (src == -1)
     {
         printf("Falha na execução da funcionalidade.\n");
@@ -500,7 +442,6 @@ int countCyclesBetweenStations(FILE *binaryMetroFile,
     }
 
     int *visited = (int *) calloc(n, sizeof(int));
-    //marca a origem como visitada para que os caminhos não voltem por ela durante a busca
     visited[src] = 1;
 
     CycleCtx ctx = { &list, visited, src, 0 };
